@@ -1,28 +1,43 @@
 # ScreenCapturer 📸
 
-A high-performance, ultra-lightweight Windows 10/11 background utility written in Go that lets you trigger on-demand screen captures of your laptop directly from your phone on the local Wi-Fi.
+A lightweight Windows 10/11 app that lets you capture your laptop's screen directly from your phone over local Wi-Fi. 
 
-No cloud services, no external database, no video recording, no background polling, and zero CPU usage while idle.
+No cloud, no accounts, no video recording, no background polling, and 0% CPU while idle.
 
 ---
 
-## 📑 Table of Contents
-- [How It Works](#-how-it-works)
-- [Do You Need to Package the Whole Project?](#-do-you-need-to-package-the-whole-project)
-- [How to Turn On / Off](#-how-to-turn-on--off)
-- [Installation & Setup](#-installation--setup)
-  - [Option A: Pre-built Single Executable](#option-a-pre-built-single-executable)
-  - [Option B: Build from Source](#option-b-build-from-source)
-- [Phone Walkthrough](#-phone-walkthrough)
-- [Performance & Benchmarks](#-performance--benchmarks)
-- [Memory Management & What Can Go Wrong](#-memory-management--what-can-go-wrong)
-- [Security Model](#-security-model)
+## 🚀 Quick Start (No Go or Coding Required!)
+
+You **do NOT** need to install Go, Node.js, or any programming tools. Everything is packaged into a ready-to-use zip.
+
+### 1. Download & Extract
+👉 **[Download ScreenCapturer v1.0.0 (Windows)](https://github.com/Rohan-droid7341/ScreenCapturer/releases/latest)**
+
+Download `ScreenCapturer-v1.0.0-windows-amd64.zip` and extract the folder to your `Desktop` or `Downloads`.
+
+### 2. Start ScreenCapturer
+Double-click **`screencap.exe`**.
+- Your web browser will automatically open showing your pairing QR code and connection status.
+- *(If Windows Defender Firewall prompts you, check **Private networks** and click **Allow access**).*
+
+### 3. Connect & Capture from Your Phone
+1. Make sure your phone is connected to the same Wi-Fi as your laptop.
+2. Scan the QR code shown on your laptop screen with your phone's camera and tap the link.
+3. Tap the big blue **"📸 Capture Screen"** button.
+4. Your laptop's screen appears on your phone in under a second! Tap **"💾 Save Image"** or long-press to save it to your camera roll.
+
+### 4. How to Turn It Off
+When you are done, you can stop the app using any of these options:
+- **From your browser:** Click the red **"🛑 Turn Off ScreenCapturer"** button at the bottom of the pairing page.
+- **From the folder:** Double-click **`stop.bat`**.
+- **From the System Tray:** Right-click the camera icon in your taskbar (near the clock) and click **Exit ScreenCapturer**.
+- *(If you closed the browser tab earlier, just double-click `screencap.exe` again to bring the page right back, or double-click `stop.bat`!)*
 
 ---
 
 ## 🧠 How It Works
 
-ScreenCapturer is engineered with a strict **"Do nothing until requested"** architecture:
+ScreenCapturer uses an on-demand, event-driven architecture that only takes a screenshot at the exact moment your phone requests one:
 
 ```
 ┌──────────────┐                  ┌──────────────────────────────────────────────┐
@@ -38,163 +53,71 @@ ScreenCapturer is engineered with a strict **"Do nothing until requested"** arch
 └──────────────┘   Image Stream   └──────────────────────────────────────────────┘
 ```
 
-1. **Native Windows Capture without cgo**: Uses standard Windows GDI (`BitBlt` and `GetDIBits`) directly via `golang.org/x/sys/windows`.
-2. **DPI-Aware**: Enabled with Per-Monitor V2 awareness (`SetProcessDpiAwarenessContext`) so screenshots always capture your display's full physical resolution (e.g. 1920×1080, 2560×1440, 4K) even if Windows display scaling is set to 125%, 150%, or 200%.
-3. **In-place Zero-Copy Conversion**: GDI yields BGRA pixels. ScreenCapturer converts BGRA to RGBA and sets alpha to 255 in-place directly inside the target image buffer, eliminating full-frame memory duplication.
-4. **Embedded Mobile Frontend**: All HTML, CSS, and modern JavaScript files are bundled directly into the executable using Go's `embed.FS`.
+1. **Native Windows Capture (GDI)**: Captures pixels directly using standard Win32 APIs (`BitBlt` + `GetDIBits`) without any slow external screen recorder or Snipping Tool.
+2. **Full Resolution DPI-Aware**: Uses Per-Monitor V2 awareness so screenshots are captured at full hardware resolution (1920×1080, 2K, 4K) even with Windows 125%/150% scaling.
+3. **Zero-Copy Conversion**: Directly swaps pixel channels in memory from Windows BGRA to standard RGBA without duplicating frame buffers.
+4. **Self-Contained Executable**: All web assets (HTML/CSS/JS) are compiled directly inside the `.exe`.
 
 ---
 
-## 📦 Do You Need to Package the Whole Project?
+## ⚙️ Advanced Details & Troubleshooting
 
-**No!** You only need **`screencap.exe`** (or the release zip containing `screencap.exe` + `stop.bat`).
+<details>
+<summary><b>🛠️ Building from Source (For Developers)</b></summary>
 
-Users **do NOT** need to clone the repo, install Go, or download the source code.
-
-👉 **Direct Download**: Anyone can download the latest pre-built zip from [**GitHub Releases v1.0.0**](https://github.com/Rohan-droid7341/ScreenCapturer/releases/latest).
-
----
-
-## 🚀 Download & Quick Start for Anyone
-
-1. Go to the [**Releases Page**](https://github.com/Rohan-droid7341/ScreenCapturer/releases/latest).
-2. Download **`ScreenCapturer-v1.0.0-windows-amd64.zip`**.
-3. Extract the folder anywhere (e.g. `Downloads` or `Desktop`).
-4. Double-click **`screencap.exe`** to start!
-5. To stop it anytime, either click **"Turn Off ScreenCapturer"** in the browser or double-click **`stop.bat`**.
-
-Because all HTML, CSS, and JavaScript are embedded directly inside the compiled binary via `go:embed`, the application requires:
-- ❌ No Node.js / Python / frontend runtime
-- ❌ No external assets, DLLs, or folder structures
-- ❌ No database or configuration files to copy
-
-Just copy `screencap.exe` anywhere and double-click it. It automatically initializes its configuration and pairing token in `%APPDATA%\ScreenCapturer\config.json` on first run.
-
----
-
-## ⚡ How to Turn On / Off
-
-### 1. From the Web Dashboard (Easiest & Recommended)
-Whenever ScreenCapturer is running, the pairing control page opens in your browser.
-- Simply click the red **"🛑 Turn Off ScreenCapturer"** button at the bottom of the page.
-- It will immediately and cleanly stop the server, close all network ports, and terminate the process.
-
-### 2. Double-Click `stop.bat`
-In your ScreenCapturer folder, simply double-click **`stop.bat`** to instantly shut it down with one click.
-
-### 3. Console Mode
-If running via terminal (`.\screencap.exe --console`), simply press **`Ctrl + C`** to shut down.
-
----
-
-## 🚀 Installation & Setup
-
-### Option A: Pre-built Single Executable
-1. Download `screencap.exe`.
-2. Double-click `screencap.exe`.
-3. If prompted by Windows Defender Firewall, check **Private networks** and click **Allow access**.
-
-### Option B: Build from Source
-**Prerequisites:** Go 1.22+ installed on Windows.
+If you have Go installed and want to build the executable yourself:
 
 ```powershell
 # 1. Clone repository
 git clone https://github.com/Rohan-droid7341/ScreenCapturer.git
 cd ScreenCapturer
 
-# 2. Build the production GUI executable (no console window)
+# 2. Build the production GUI binary (silent background window)
 go build -ldflags "-H=windowsgui -s -w" -o screencap.exe ./cmd/screencap
 
-# Or build with console output enabled for debugging:
+# Or build with console logging enabled for testing:
 go build -o screencap.exe ./cmd/screencap
 ```
+</details>
 
-### Windows Firewall Setup (One-Time)
-If your phone cannot connect, run this command in **PowerShell (Run as Administrator)**:
+<details>
+<summary><b>🧱 Windows Firewall Setup (If Phone Cannot Connect)</b></summary>
+
+If your phone browser says "Cannot connect" or times out, Windows Firewall may be blocking incoming connections. Run this command in **PowerShell (Run as Administrator)**:
+
 ```powershell
 New-NetFirewallRule -DisplayName "ScreenCapturer" -Direction Inbound -LocalPort 8765 -Protocol TCP -Action Allow -Profile Private
 ```
+*(Note: Hotel or corporate guest Wi-Fi networks may have "Client Isolation" turned on. If so, simply connect your laptop to your phone's personal mobile hotspot, or use a mesh tool like Tailscale).*
+</details>
 
----
+<details>
+<summary><b>📊 Performance & Benchmarks</b></summary>
 
-## 📱 Phone Walkthrough
+Measured on Windows 11 (AMD64, 1920×1080 physical display):
 
-### Step 1: Connect to Same Wi-Fi
-Make sure your phone and laptop are connected to the same Wi-Fi network.
-
-### Step 2: Open Mobile Control Page
-Choose either:
-- **Scan QR Code:** Right-click the tray icon ➔ **"Show Pairing QR Code"**, then scan the QR code with your phone camera.
-- **Direct Link:** Right-click tray icon ➔ **"Copy Phone Address"**, and open the link on your mobile browser (Safari, Chrome, Firefox).
-
-<!-- Placeholder for Pairing Screen -->
-> ![Phone Pairing QR](docs/images/qr-pairing.png)
-
-### Step 3: Capture and Save
-1. Select your preferred format:
-   - **JPEG (90%)**: ~100–140 ms roundtrip (recommended for speed and photos).
-   - **PNG**: Lossless pixel-perfect image (recommended for reading small text).
-2. Tap the large **📸 Capture Screen** button.
-3. The image displays instantly with file size and roundtrip latency.
-4. Tap **💾 Save** or **📤 Share**, or simply long-press the image to save to your camera roll.
-
-<!-- Placeholder for Mobile UI Screen -->
-> ![Mobile Interface Preview](docs/images/mobile-ui.png)
-
----
-
-## 📊 Performance & Benchmarks
-
-Measured on Windows 11 (AMD64, 1920×1080 native resolution):
-
-| Metric | Target (PRD) | Measured Result |
+| Metric | Target | Measured Result |
 | :--- | :---: | :---: |
 | **Idle Memory (Working Set)** | 10–30 MB | **8.64 MB** |
-| **Peak Memory (100 Captures Stress)** | 20–60 MB | **46.14 MB** |
-| **Final Memory after GC** | Minimal | **37.06 MB** |
+| **Peak Memory (100 Captures Stress Test)** | 20–60 MB | **46.14 MB** |
 | **Screen Capture Acquisition** | 20–200 ms | **58.44 ms** |
 | **JPEG Encoding (Quality 90)** | 20–200 ms | **39.40 ms** (~290 KB) |
 | **PNG Encoding (BestSpeed)** | 20–200 ms | **109.14 ms** (~755 KB) |
 | **100 Sequential Captures Duration** | — | **20.82 seconds** (Avg 208 ms/frame) |
-| **Goroutine Leak Check** | 0 leaks | **Delta: 0** (1 baseline ➔ 1 final) |
-| **GDI Handle Leak Check** | 0 leaks | **Delta: 0** (0 baseline ➔ 0 final) |
+| **Goroutine / Handle Leaks** | 0 leaks | **0 leaks detected** |
+</details>
 
----
+<details>
+<summary><b>🛡️ Security & Memory Management</b></summary>
 
-## 🛡️ Memory Management & What Can Go Wrong
-
-### How Memory is Managed
-1. **Zero Full-Frame Copies**: BitBlt reads directly into memory; in-place swap to RGBA.
-2. **Runtime Memory Limit**: Set to `debug.SetMemoryLimit(128 MB)` with `debug.SetGCPercent(50)`.
-3. **Explicit Deallocation**: `debug.FreeOSMemory()` is called immediately following every capture to release OS memory back to Windows.
-4. **Browser Blob URL Revocation**: The mobile webpage automatically calls `URL.revokeObjectURL(oldUrl)` before creating a new image preview, preventing mobile browser memory bloat.
-
-### What Else Can Go Wrong & How It Is Handled
-- **Laptop Locked (`Win + L`) or Screensaver Active**:
-  - *Behavior*: `OpenInputDesktop` detects locked workstation; server returns HTTP `503 Service Unavailable` with `{"error": "Screen is currently locked", "code": "SCREEN_LOCKED"}`.
-  - *Result*: The mobile UI displays a friendly error banner instead of hanging or returning corrupt images.
-- **Laptop Put to Sleep / Wakes Up**:
-  - The capture engine binds dynamically per-request. When the laptop wakes up, captures resume immediately without requiring an app restart.
-- **Wi-Fi IP Address Changes (DHCP renewal)**:
-  - The server binds to `0.0.0.0:8765` (all local interfaces). If your laptop changes Wi-Fi IP, simply right-click the tray icon and select **"Show Pairing QR Code"** to get the updated URL.
-- **Port Already in Use**:
-  - If another application is using port 8765, ScreenCapturer catches `WSAEADDRINUSE` and logs an actionable error message. Port can be adjusted in `%APPDATA%\ScreenCapturer\config.json`.
-- **Guest Wi-Fi Client Isolation**:
-  - Some hotel/office guest Wi-Fi networks block devices from connecting to each other.
-  - *Solution*: Enable a mobile hotspot on your phone and connect your laptop to it, or use a secure mesh VPN like **Tailscale**.
-
----
-
-## 🔒 Security Model
-
-- **32-Byte Cryptographic Token**: Generated using `crypto/rand` on first run. Never hardcoded.
-- **URL Fragment Transport**: The token is passed in the URL fragment (`#token=<token>`). Fragments are never transmitted in HTTP request lines, browser history, or server access logs.
-- **Constant-Time Verification**: Validated using `crypto/subtle.ConstantTimeCompare` to eliminate timing attacks.
-- **Brute-Force Protection**: 5 consecutive failed authentication attempts automatically locks out the offending client IP for 60 seconds.
-- **Host Header Validation**: Prevents DNS rebinding attacks.
-- **Zero Sensitive Logging**: Tokens and image payload bytes are strictly prohibited from appearing in log files.
+- **Token-Based Authentication**: A 32-byte cryptographically random token is generated on first launch and stored in `%APPDATA%\ScreenCapturer\config.json`.
+- **Safe Fragment Passing**: The token is delivered via URL fragment (`#token=...`), preventing it from ever being sent in plain HTTP request headers, browser history, or server access logs.
+- **Brute Force Lockout**: 5 failed token attempts locks the offending client IP out for 60 seconds.
+- **Automatic Garbage Collection**: `debug.FreeOSMemory()` is called immediately following each capture to release operating system memory back to Windows.
+- **Locked Screen Protection**: If your laptop is locked (`Win + L`), the server returns an informative error message (`SCREEN_LOCKED`) instead of freezing or outputting corrupt blank frames.
+</details>
 
 ---
 
 ## 📄 License
-MIT License. Created with Go and native Windows APIs.
+MIT License.
