@@ -1,37 +1,56 @@
 # ScreenCapturer 📸
 
-A lightweight Windows 10/11 app that lets you capture your laptop's screen directly from your phone over local Wi-Fi. 
+A lightweight cross-platform utility for Windows 10/11 & macOS that lets you capture your laptop's screen directly from your phone over local Wi-Fi. 
 
-No cloud, no accounts, no video recording, no background polling, and 0% CPU while idle.
+No cloud, no accounts, no video recording, no background polling, no snipping tool invocation, and 0% CPU while idle.
 
 ---
 
 ## 🚀 Quick Start (No Go or Coding Required!)
 
-You **do NOT** need to install Go, Node.js, or any programming tools. Everything is packaged into a ready-to-use zip.
+You **do NOT** need to install Go, Node.js, or any programming tools. Download the pre-built package for your OS:
 
-### 1. Download & Extract
-👉 **[Download ScreenCapturer v1.0.0 (Windows)](https://github.com/Rohan-droid7341/ScreenCapturer/releases/latest)**
+### 1. Download
+👉 **[Go to GitHub Releases v1.0.0](https://github.com/Rohan-droid7341/ScreenCapturer/releases/latest)**
 
-Download `ScreenCapturer-v1.0.0-windows-amd64.zip` and extract the folder to your `Desktop` or `Downloads`.
+- **Windows 10 / 11:** Download `ScreenCapturer-v1.0.0-windows-amd64.zip`
+- **macOS (Apple Silicon M1/M2/M3/M4):** Download `ScreenCapturer-v1.0.0-darwin-arm64.zip`
+- **macOS (Intel):** Download `ScreenCapturer-v1.0.0-darwin-amd64.zip`
+
+---
 
 ### 2. Start ScreenCapturer
-Double-click **`screencap.exe`**.
+
+#### On Windows:
+- Extract the zip and double-click **`screencap.exe`**.
 - Your web browser will automatically open showing your pairing QR code and connection status.
 - *(If Windows Defender Firewall prompts you, check **Private networks** and click **Allow access**).*
 
+#### On macOS:
+- Extract the zip.
+- Open Terminal in the extracted folder and run:
+  ```bash
+  chmod +x screencap stop.sh
+  ./screencap
+  ```
+- Your default browser (Safari/Chrome) will open showing your pairing QR code.
+- *(Note: On first launch, macOS will prompt you to grant **Screen Recording** permission in System Settings ➔ Privacy & Security).*
+
+---
+
 ### 3. Connect & Capture from Your Phone
-1. Make sure your phone is connected to the same Wi-Fi as your laptop.
-2. Scan the QR code shown on your laptop screen with your phone's camera and tap the link.
+1. Make sure your phone is connected to the same Wi-Fi as your computer.
+2. Scan the QR code shown on your laptop screen with your phone camera and open the link.
 3. Tap the big blue **"📸 Capture Screen"** button.
-4. Your laptop's screen appears on your phone in under a second! Tap **"💾 Save Image"** or long-press to save it to your camera roll.
+4. Your screen appears on your phone in under a second! Tap **"💾 Save Image"** or long-press to save it to your camera roll.
+
+---
 
 ### 4. How to Turn It Off
-When you are done, you can stop the app using any of these options:
+When you are done, shut down the app anytime:
 - **From your browser:** Click the red **"🛑 Turn Off ScreenCapturer"** button at the bottom of the pairing page.
-- **From the folder:** Double-click **`stop.bat`**.
-- **From the System Tray:** Right-click the camera icon in your taskbar (near the clock) and click **Exit ScreenCapturer**.
-- *(If you closed the browser tab earlier, just double-click `screencap.exe` again to bring the page right back, or double-click `stop.bat`!)*
+- **On Windows:** Double-click **`stop.bat`** or click **Exit** in the System Tray.
+- **On macOS:** Run `./stop.sh` or press `Ctrl + C` in Terminal.
 
 ---
 

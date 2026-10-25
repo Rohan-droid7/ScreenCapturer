@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 )
 
@@ -30,11 +31,15 @@ type Config struct {
 
 // DefaultConfig returns safe default settings.
 func DefaultConfig() *Config {
+	engine := "gdi"
+	if runtime.GOOS == "darwin" {
+		engine = "coregraphics"
+	}
 	return &Config{
 		Port:          8765,
 		AllowedHosts:  []string{"localhost", "127.0.0.1"},
 		AutoStopHours: 0,
-		CaptureEngine: "gdi",
+		CaptureEngine: engine,
 		DefaultFormat: "png",
 		JPEGQuality:   90,
 		MaxLogSizeMB:  5,
@@ -42,17 +47,19 @@ func DefaultConfig() *Config {
 	}
 }
 
-// ConfigFilePath returns the absolute path to the configuration file in %APPDATA%.
+// ConfigFilePath returns the absolute path to the configuration file.
+// On Windows: %APPDATA%\ScreenCapturer\config.json
+// On macOS: ~/Library/Application Support/ScreenCapturer/config.json
 func ConfigFilePath() (string, error) {
-	appData := os.Getenv("APPDATA")
-	if appData == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		home, hErr := os.UserHomeDir()
+		if hErr != nil {
 			return "", fmt.Errorf("unable to determine user config directory: %w", err)
 		}
-		appData = filepath.Join(home, "AppData", "Roaming")
+		configDir = filepath.Join(home, ".config")
 	}
-	dir := filepath.Join(appData, AppName)
+	dir := filepath.Join(configDir, AppName)
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", fmt.Errorf("failed to create app data directory: %w", err)
 	}

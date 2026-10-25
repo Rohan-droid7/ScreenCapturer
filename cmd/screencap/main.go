@@ -17,20 +17,12 @@ import (
 	"ScreenCapturer/internal/tray"
 )
 
-var (
-	modKernel32       = syscall.NewLazyDLL("kernel32.dll")
-	procAttachConsole = modKernel32.NewProc("AttachConsole")
-)
-
-const attachParentProcess = ^uintptr(0)
-
 func main() {
 	consoleMode := flag.Bool("console", false, "Run in interactive console mode instead of system tray")
 	flag.Parse()
 
 	if *consoleMode {
-		// Attach to parent console if launched from terminal in GUI subsystem mode
-		_, _, _ = procAttachConsole.Call(attachParentProcess)
+		attachConsoleIfRequested()
 	}
 
 	defer func() {
@@ -83,13 +75,20 @@ func main() {
 	logInstance.Infof("Starting ScreenCapturer Agent (Port: %d, Engine: %s)", cfg.Port, cfg.CaptureEngine)
 
 	// 6. Capture Engine & Auth
-	gdiCap := capture.NewGDICapturer()
-	defer gdiCap.Close()
+	nativeCap, err := capture.NewDefaultCapturer()
+	if err != nil {
+		logInstance.Errorf("Failed to initialize capture engine: %v", err)
+		if *consoleMode {
+			fmt.Fprintf(os.Stderr, "Capture engine error: %v\n", err)
+		}
+		os.Exit(1)
+	}
+	defer nativeCap.Close()
 
 	authMgr := auth.NewManager(cfg.GetToken, cfg.AllowedHosts, cfg.Port)
 
 	// 7. HTTP Server
-	srv := server.NewServer(cfg, gdiCap, authMgr)
+	srv := server.NewServer(cfg, nativeCap, authMgr)
 	logInstance.Infof("Starting HTTP server on :%d...", cfg.Port)
 	if err := srv.Start(); err != nil {
 		logInstance.Errorf("Failed to start server: %v", err)
@@ -112,7 +111,7 @@ func main() {
 		fmt.Println("                   SCREEN CAPTURER AGENT                        ")
 		fmt.Println("================================================================")
 		fmt.Printf(" Server Port      : %d\n", cfg.Port)
-		fmt.Printf(" Capture Engine   : %s\n", gdiCap.Name())
+		fmt.Printf(" Capture Engine   : %s\n", nativeCap.Name())
 		fmt.Printf(" Local URL        : %s\n", localURL)
 		fmt.Printf(" Mobile Phone URL : %s\n", pairingURL)
 		fmt.Println("----------------------------------------------------------------")

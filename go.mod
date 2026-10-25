@@ -4,6 +4,7 @@ go 1.26.0
 
 require (
 	fyne.io/systray v1.12.2 // indirect
+	github.com/ebitengine/purego v0.11.2 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 )
