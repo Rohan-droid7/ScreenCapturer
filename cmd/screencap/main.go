@@ -33,12 +33,33 @@ func main() {
 		_, _, _ = procAttachConsole.Call(attachParentProcess)
 	}
 
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Get().Errorf("CRITICAL PANIC: %v\nStack: %s", r, debug.Stack())
+		}
+	}()
+
 	// 1. Memory hygiene: 128 MB soft limit and active GC percent
 	debug.SetMemoryLimit(128 * 1024 * 1024)
 	debug.SetGCPercent(50)
 
 	// 2. DPI Awareness
 	capture.EnableDPIAwareness()
+
+	// 3. Single-instance guard
+	guard, err := singleinstance.Acquire("ScreenCapturerSingleInstance")
+	if err != nil {
+		// An instance is already running in the system tray!
+		// Automatically open the pairing dashboard so the user gets instant visual feedback.
+		if cfg, loadErr := config.LoadOrCreate(); loadErr == nil {
+			_ = tray.GenerateAndOpenPairingPage(cfg)
+		}
+		if *consoleMode {
+			fmt.Println("ScreenCapturer is already running in your system tray.")
+		}
+		os.Exit(0)
+	}
+	defer guard.Release()
 
 	// 4. Configuration
 	cfg, err := config.LoadOrCreate()
@@ -59,18 +80,6 @@ func main() {
 	}
 	defer logInstance.Close()
 
-	// 3. Single-instance guard
-	logInstance.Infof("Checking single-instance mutex...")
-	guard, err := singleinstance.Acquire("ScreenCapturerSingleInstance")
-	if err != nil {
-		logInstance.Errorf("Single-instance check failed: %v", err)
-		if *consoleMode {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		}
-		os.Exit(1)
-	}
-	defer guard.Release()
-
 	logInstance.Infof("Starting ScreenCapturer Agent (Port: %d, Engine: %s)", cfg.Port, cfg.CaptureEngine)
 
 	// 6. Capture Engine & Auth
@@ -90,6 +99,9 @@ func main() {
 		os.Exit(1)
 	}
 	logInstance.Infof("HTTP server successfully started.")
+
+	// Automatically open the pairing dashboard so the user gets instant reassurance
+	_ = tray.GenerateAndOpenPairingPage(cfg)
 
 	lanIP := server.GetPrimaryLANIP()
 	pairingURL := fmt.Sprintf("http://%s:%d/#token=%s", lanIP, cfg.Port, cfg.GetToken())

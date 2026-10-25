@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -163,53 +162,14 @@ func (at *AppTray) resetAutoStopTimer(mStatus, mToggle *systray.MenuItem) {
 }
 
 func (at *AppTray) showQRCodePage() {
-	lanIP := server.GetPrimaryLANIP()
-	pairingURL := fmt.Sprintf("http://%s:%d/#token=%s", lanIP, at.cfg.Port, at.cfg.GetToken())
-
-	appData, err := config.ConfigFilePath()
-	if err != nil {
-		return
-	}
-	dir := filepath.Dir(appData)
-	qrPath := filepath.Join(dir, "pairing.html")
-
-	html := fmt.Sprintf(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>ScreenCapturer Mobile Pairing</title>
-  <style>
-    body { font-family: -apple-system, system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0f172a; color: #fff; margin: 0; }
-    .card { background: #1e293b; padding: 32px; border-radius: 16px; text-align: center; max-width: 420px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-    h2 { margin: 0 0 8px 0; }
-    p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px; }
-    .qr-box { background: #fff; padding: 16px; border-radius: 12px; display: inline-block; margin-bottom: 16px; }
-    .qr-box img { display: block; width: 220px; height: 220px; }
-    .url { font-family: monospace; font-size: 0.8rem; background: #0f172a; padding: 10px; border-radius: 6px; word-break: break-all; color: #38bdf8; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h2>📱 Scan with Phone</h2>
-    <p>Connect your phone to the same Wi-Fi and point your camera here:</p>
-    <div class="qr-box">
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=%s" alt="QR Code" />
-    </div>
-    <div class="url">%s</div>
-  </div>
-</body>
-</html>`, pairingURL, pairingURL)
-
-	_ = exec.Command("powershell", "-NoProfile", "-Command", fmt.Sprintf(`Set-Content -Path '%s' -Value @'
-%s
-'@`, qrPath, html)).Run()
-
-	openBrowser(qrPath)
+	_ = GenerateAndOpenPairingPage(at.cfg)
 }
 
 func (at *AppTray) onExit() {
-	logger.Get().Infof("Exiting via system tray...")
-	_ = at.srv.Stop()
+	if at.userExited {
+		logger.Get().Infof("Exiting via system tray...")
+		_ = at.srv.Stop()
+	}
 }
 
 func openBrowser(url string) {
