@@ -24,16 +24,16 @@ func GenerateAndOpenPairingPage(cfg *config.Config) error {
   <title>ScreenCapturer • Phone Pairing & Controls</title>
   <style>
     :root {
-      --bg: #0f172a;
-      --card: #1e293b;
-      --border: #334155;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
-      --success-bg: #064e3b;
-      --success-border: #10b981;
-      --success-text: #6ee7b7;
+      --bg: #09090b;
+      --card: #121215;
+      --border: #222227;
+      --text: #fafafa;
+      --muted: #71717a;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --success-bg: #052e16;
+      --success-border: #15803d;
+      --success-text: #86efac;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {

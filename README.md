@@ -41,8 +41,14 @@ You **do NOT** need to install Go, Node.js, or any programming tools. Download t
 ### 3. Connect & Capture from Your Phone
 1. Make sure your phone is connected to the same Wi-Fi as your computer.
 2. Scan the QR code shown on your laptop screen with your phone camera and open the link.
-3. Tap the big blue **"📸 Capture Screen"** button.
-4. Your screen appears on your phone in under a second! Tap **"💾 Save Image"** or long-press to save it to your camera roll.
+3. Tap **Capture** — your screen appears instantly.
+4. Tap **Save** or long-press the preview to save to your camera roll.
+
+<p align="center">
+  <img src="docs/images/mobile-capture-desktop.jpg" width="300" alt="Mobile Capture Desktop Preview" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/images/mobile-capture-meet.jpg" width="300" alt="Mobile Capture Video Call Preview" />
+</p>
 
 ---
 

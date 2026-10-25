@@ -3,74 +3,64 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Screen Capturer</title>
+  <title>ScreenCapturer</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="app-container">
     <header class="app-header">
-      <div class="logo-group">
-        <div class="status-dot" id="statusDot"></div>
-        <h1>Screen Capturer</h1>
+      <div class="brand">
+        <div class="status-indicator" id="statusDot"></div>
+        <span class="brand-name">ScreenCapturer</span>
       </div>
-      <div class="header-actions">
-        <select id="formatSelect" class="format-select" aria-label="Image Format">
+      <div class="controls-right">
+        <select id="formatSelect" class="select-format" aria-label="Format">
+          <option value="jpeg" selected>JPEG (Fast)</option>
           <option value="png">PNG (Lossless)</option>
-          <option value="jpeg" selected>JPEG (Fast, 90%)</option>
         </select>
+        <button id="turnOffBtn" class="btn-power" title="Turn Off Server">Off</button>
       </div>
     </header>
 
     <main class="main-content">
-      <!-- Reassurance Banner -->
-      <div class="reassurance-card">
-        🛡️ <strong>ScreenCapturer is active in your system tray!</strong><br>
-        <span class="reassurance-sub">You can freely close this browser tab anytime — background screen captures will continue to work from your phone.</span>
-      </div>
-
       <!-- Error / Alert Banner -->
-      <div id="errorBanner" class="alert-banner hidden">
+      <div id="errorBanner" class="alert-box hidden">
         <span id="errorMessage"></span>
-        <button id="dismissError" class="dismiss-btn">&times;</button>
+        <button id="dismissError" class="btn-close">&times;</button>
       </div>
 
-      <!-- Token Setup Modal/Banner if not paired -->
-      <div id="tokenBanner" class="token-banner hidden">
-        <p><strong>Pairing Required:</strong> Enter the token from the desktop tray or scan the QR code.</p>
-        <div class="token-input-row">
-          <input type="password" id="manualTokenInput" placeholder="Paste 64-char hex token" />
-          <button id="saveTokenBtn" class="btn-sm">Save</button>
-        </div>
+      <!-- Token Pairing Input (only if opened without token) -->
+      <div id="tokenBanner" class="token-box hidden">
+        <input type="password" id="manualTokenInput" placeholder="Enter token" />
+        <button id="saveTokenBtn" class="btn-primary">Connect</button>
       </div>
 
-      <!-- Capture Controls -->
-      <section class="controls-section">
+      <!-- Capture Button -->
+      <div class="action-row">
         <button id="captureBtn" class="btn-capture">
-          <span class="btn-spinner hidden" id="captureSpinner"></span>
-          <span id="captureText">📸 Capture Screen</span>
+          <span class="spinner hidden" id="captureSpinner"></span>
+          <span id="captureText">Capture</span>
         </button>
-      </section>
+      </div>
 
-      <!-- Preview Section -->
-      <section id="previewSection" class="preview-section hidden">
-        <div class="preview-header">
-          <span id="captureMeta" class="capture-meta"></span>
-          <div class="preview-actions">
-            <button id="shareBtn" class="btn-action hidden">📤 Share</button>
-            <a id="downloadLink" class="btn-action" download="screenshot.jpg">💾 Save</a>
+      <!-- Preview Card -->
+      <div id="previewSection" class="preview-card hidden">
+        <div class="preview-bar">
+          <span id="captureMeta" class="meta-tag"></span>
+          <div class="bar-actions">
+            <button id="shareBtn" class="btn-secondary hidden">Share</button>
+            <a id="downloadLink" class="btn-secondary" download="capture.jpg">Save</a>
           </div>
         </div>
 
-        <div class="image-wrapper">
-          <img id="previewImage" alt="Screen Capture Preview" />
+        <div class="frame">
+          <img id="previewImage" alt="Screen Capture" />
         </div>
-        <p class="preview-tip">💡 Tip: You can also tap &amp; hold / long-press the image to save or copy it.</p>
-      </section>
+      </div>
     </main>
 
     <footer class="app-footer">
-      <span id="timingInfo">Ready</span>
-      <button id="turnOffBtn" class="btn-turn-off">🛑 Turn Off Agent</button>
+      <span id="timingInfo">Connected</span>
     </footer>
   </div>
 
