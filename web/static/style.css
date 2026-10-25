@@ -296,9 +296,27 @@ body {
   padding-top: 16px;
   border-top: 1px solid var(--border-color);
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
+  align-items: center;
   font-size: 0.8rem;
   color: var(--text-secondary);
+}
+
+.btn-turn-off {
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.btn-turn-off:hover {
+  background: #ef4444;
+  color: #ffffff;
 }
 
 .hidden {

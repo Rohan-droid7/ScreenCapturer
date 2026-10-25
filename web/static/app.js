@@ -18,6 +18,7 @@
   const tokenBanner = document.getElementById('tokenBanner');
   const manualTokenInput = document.getElementById('manualTokenInput');
   const saveTokenBtn = document.getElementById('saveTokenBtn');
+  const turnOffBtn = document.getElementById('turnOffBtn');
 
   let currentBlobUrl = null;
   let currentFile = null;
@@ -187,6 +188,29 @@
       }
     }
   });
+
+  if (turnOffBtn) {
+    turnOffBtn.addEventListener('click', async function () {
+      if (!confirm('Are you sure you want to turn off ScreenCapturer on your laptop?\n\nThe background agent will exit immediately.')) {
+        return;
+      }
+      turnOffBtn.disabled = true;
+      turnOffBtn.textContent = 'Stopping...';
+      try {
+        await fetch('/api/shutdown', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+      } catch (_) {}
+      document.body.innerHTML = `
+        <div style="font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0f172a; color: #f8fafc; text-align: center; padding: 20px;">
+          <div style="font-size: 3.5rem; margin-bottom: 16px;">🛑</div>
+          <h2>ScreenCapturer is Off</h2>
+          <p style="color: #94a3b8; margin: 12px 0 20px 0;">The agent has shut down. You can close this page.</p>
+        </div>
+      `;
+    });
+  }
 
   // Initialization
   checkUrlFragmentToken();

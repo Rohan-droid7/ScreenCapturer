@@ -117,21 +117,26 @@ func main() {
 		fmt.Printf(" Mobile Phone URL : %s\n", pairingURL)
 		fmt.Println("----------------------------------------------------------------")
 		fmt.Println(" Connect your phone to the same Wi-Fi and open the Mobile URL.   ")
-		fmt.Println(" Press Ctrl+C in this console to stop.                          ")
+		fmt.Println(" Press Ctrl+C in this console or click Turn Off on the page.    ")
 		fmt.Println("================================================================")
-
-		sigChan := make(chan os.Signal, 1)
-		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-		<-sigChan
-
-		logInstance.Infof("Shutting down...")
-		_ = srv.Stop()
-		return
 	}
 
-	// Default: Run in Windows System Tray
-	logInstance.Infof("Starting Windows System Tray...")
-	appTray := tray.NewAppTray(cfg, srv)
-	appTray.Run()
-	logInstance.Infof("Windows System Tray exited.")
+	// Listen for OS interrupt / terminate signals in background
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		logInstance.Infof("Shutdown signal received.")
+		srv.TriggerShutdown()
+	}()
+
+	// Launch systray in background goroutine (best effort for Windows shell)
+	go func() {
+		appTray := tray.NewAppTray(cfg, srv)
+		appTray.Run()
+	}()
+
+	// Keep server alive until shutdown is requested (via Web UI, stop.bat, tray, or Ctrl+C)
+	srv.WaitForShutdown()
+	logInstance.Infof("ScreenCapturer server stopped.")
 }

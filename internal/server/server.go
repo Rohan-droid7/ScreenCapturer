@@ -22,25 +22,40 @@ import (
 
 // Server wraps the HTTP listener and handlers.
 type Server struct {
-	cfg         *config.Config
-	authMgr     *auth.Manager
-	capturer    capture.Capturer
-	httpServer  *http.Server
-	listener    net.Listener
-	captureMu   sync.Mutex
-	running     bool
-	mu          sync.Mutex
-	onCaptureCb func() // Optional callback when a capture succeeds (for tray balloons/toasts)
+	cfg          *config.Config
+	authMgr      *auth.Manager
+	capturer     capture.Capturer
+	httpServer   *http.Server
+	listener     net.Listener
+	captureMu    sync.Mutex
+	running      bool
+	mu           sync.Mutex
+	onCaptureCb  func() // Optional callback when a capture succeeds
+	shutdownChan chan struct{}
+	shutdownOnce sync.Once
 }
 
 // NewServer constructs the HTTP server with timeouts and routes.
 func NewServer(cfg *config.Config, capturer capture.Capturer, authMgr *auth.Manager) *Server {
 	s := &Server{
-		cfg:      cfg,
-		capturer: capturer,
-		authMgr:  authMgr,
+		cfg:          cfg,
+		capturer:     capturer,
+		authMgr:      authMgr,
+		shutdownChan: make(chan struct{}),
 	}
 	return s
+}
+
+// WaitForShutdown blocks until the server receives a shutdown request.
+func (s *Server) WaitForShutdown() {
+	<-s.shutdownChan
+}
+
+// TriggerShutdown signals the server to terminate.
+func (s *Server) TriggerShutdown() {
+	s.shutdownOnce.Do(func() {
+		close(s.shutdownChan)
+	})
 }
 
 // SetOnCaptureCallback registers a hook called whenever an authenticated capture completes.
@@ -97,6 +112,7 @@ func (s *Server) Start() error {
 	// API endpoints
 	mux.HandleFunc("/api/status", s.handleStatus)
 	mux.HandleFunc("/api/capture", s.handleCapture)
+	mux.HandleFunc("/api/shutdown", s.handleShutdown)
 
 	addr := fmt.Sprintf("0.0.0.0:%d", s.cfg.Port)
 	listener, err := net.Listen("tcp", addr)
@@ -134,6 +150,7 @@ func (s *Server) Start() error {
 
 // Stop gracefully shuts down the server.
 func (s *Server) Stop() error {
+	s.TriggerShutdown()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -282,4 +299,32 @@ func (s *Server) handleCapture(w http.ResponseWriter, r *http.Request) {
 	if cb != nil {
 		go cb()
 	}
+}
+
+func (s *Server) handleShutdown(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		sendJSONError(w, http.StatusMethodNotAllowed, "Method not allowed; use POST", "METHOD_NOT_ALLOWED")
+		return
+	}
+
+	// Authenticate request (bearer token + host validation)
+	if err := s.authMgr.CheckRequest(r); err != nil {
+		sendJSONError(w, http.StatusUnauthorized, "Unauthorized: "+err.Error(), "UNAUTHORIZED")
+		return
+	}
+
+	logger.Get().Infof("Graceful shutdown requested from %s. Exiting...", r.RemoteAddr)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"status":  "stopped",
+		"message": "ScreenCapturer has shut down successfully.",
+	})
+
+	// Terminate process after short delay so the response finishes sending
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		_ = s.Stop()
+	}()
 }

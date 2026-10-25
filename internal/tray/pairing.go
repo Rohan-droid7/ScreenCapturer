@@ -159,6 +159,16 @@ func GenerateAndOpenPairingPage(cfg *config.Config) error {
       background: var(--border);
       color: var(--text);
     }
+    .btn-danger {
+      background: rgba(220, 38, 38, 0.2);
+      color: #fca5a5;
+      border: 1px solid rgba(220, 38, 38, 0.4);
+      margin-top: 6px;
+    }
+    .btn-danger:hover {
+      background: #dc2626;
+      color: #ffffff;
+    }
     .footer-help {
       margin-top: 24px;
       padding-top: 16px;
@@ -171,10 +181,10 @@ func GenerateAndOpenPairingPage(cfg *config.Config) error {
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="badge">
+  <div class="container" id="mainCard">
+    <div class="badge" id="statusBadge">
       <span class="pulse-dot"></span>
-      Running in Windows System Tray
+      ScreenCapturer is Active
     </div>
 
     <h1>Connect Your Phone</h1>
@@ -183,7 +193,7 @@ func GenerateAndOpenPairingPage(cfg *config.Config) error {
     <!-- Reassurance callout -->
     <div class="reassurance-box">
       🛡️ <strong>Feel free to close this browser tab!</strong><br>
-      ScreenCapturer is actively running in the background. It will capture and deliver screenshots whenever you tap Capture on your phone.
+      ScreenCapturer is running in the background. It will capture and deliver screenshots whenever you tap Capture on your phone.
     </div>
 
     <div class="qr-container" id="qrcode">
@@ -195,16 +205,47 @@ func GenerateAndOpenPairingPage(cfg *config.Config) error {
     <div class="actions">
       <a href="%s" target="_blank" class="btn btn-primary">📸 Test Capture in This Browser</a>
       <button onclick="navigator.clipboard.writeText('%s'); alert('Phone link copied to clipboard!');" class="btn btn-secondary">📋 Copy Phone Address</button>
+      <button onclick="turnOffScreenCapturer()" id="shutdownBtn" class="btn btn-danger">🛑 Turn Off ScreenCapturer</button>
     </div>
 
     <div class="footer-help">
-      <strong>Where is the tray icon?</strong><br>
-      On Windows 10/11, click the small <strong><code>^</code> (up-arrow chevron)</strong> in your taskbar near the clock. You will see the blue camera icon. You can drag it onto the taskbar to keep it always visible.<br><br>
-      <strong>How to turn off:</strong> Right-click the camera icon in your tray and click <strong>Exit</strong> or <strong>Stop Server</strong>.
+      <strong>Want to turn it off?</strong> You can click the red button above, or double-click <strong>stop.bat</strong> in your folder.
     </div>
   </div>
+
+  <script>
+    async function turnOffScreenCapturer() {
+      if (!confirm('Are you sure you want to turn off ScreenCapturer?\\n\\nCapture requests from your phone will stop until you open it again.')) {
+        return;
+      }
+      const btn = document.getElementById('shutdownBtn');
+      btn.disabled = true;
+      btn.textContent = 'Stopping...';
+      try {
+        await fetch('http://127.0.0.1:%d/api/shutdown', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer %s'
+          }
+        });
+      } catch (_) {}
+
+      document.getElementById('mainCard').innerHTML = 
+        '<div style="padding: 24px 0;">' +
+          '<div style="font-size: 3.5rem; margin-bottom: 16px;">🛑</div>' +
+          '<h2 style="color: #f8fafc; margin-bottom: 8px;">ScreenCapturer is Off</h2>' +
+          '<p style="color: #94a3b8; font-size: 0.95rem; line-height: 1.5; margin-bottom: 24px;">' +
+            'The background agent has completely shut down.<br>' +
+            'All network ports have been closed.' +
+          '</p>' +
+          '<div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; font-size: 0.85rem; color: #cbd5e1;">' +
+            'To turn it back on later, just double-click <strong>screencap.exe</strong>.' +
+          '</div>' +
+        '</div>';
+    }
+  </script>
 </body>
-</html>`, pairingURL, pairingURL, localURL, pairingURL)
+</html>`, pairingURL, pairingURL, localURL, pairingURL, cfg.Port, token)
 
 	appData, err := config.ConfigFilePath()
 	if err != nil {

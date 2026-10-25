@@ -60,24 +60,16 @@ Just copy `screencap.exe` anywhere and double-click it. It automatically initial
 
 ## ⚡ How to Turn On / Off
 
-### 1. System Tray Mode (Default)
-When you launch `screencap.exe`, it runs silently in the Windows System Tray (near the clock):
+### 1. From the Web Dashboard (Easiest & Recommended)
+Whenever ScreenCapturer is running, the pairing control page opens in your browser.
+- Simply click the red **"🛑 Turn Off ScreenCapturer"** button at the bottom of the page.
+- It will immediately and cleanly stop the server, close all network ports, and terminate the process.
 
-<!-- Placeholder for Tray Menu Screenshot -->
-> ![System Tray Menu](docs/images/tray-menu.png)
-> *(Right-click the camera icon in your Windows taskbar tray)*
+### 2. Double-Click `stop.bat`
+In your ScreenCapturer folder, simply double-click **`stop.bat`** to instantly shut it down with one click.
 
-- **Turn Server Off (Pause)**: Right-click the tray icon and click **"Stop Server"**. The port is closed and no connections are accepted.
-- **Turn Server On (Resume)**: Right-click the tray icon and click **"Start Server"**.
-- **Exit Completely**: Right-click the tray icon and click **"Exit"**. The server shuts down cleanly, releases all handles, and terminates the process.
-- **Auto-Start at Logon**: Toggle **"Start at Windows Logon"** in the tray menu to automatically run when you log in.
-
-### 2. Console Mode (For Debugging / Development)
-Run in any terminal:
-```powershell
-.\screencap.exe --console
-```
-Press `Ctrl+C` to shut down gracefully.
+### 3. Console Mode
+If running via terminal (`.\screencap.exe --console`), simply press **`Ctrl + C`** to shut down.
 
 ---
 
