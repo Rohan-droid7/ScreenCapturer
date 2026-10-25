@@ -1,0 +1,20 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+*.test
+test_*.png
+test_*.jpg
+
+# Editor and OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+
+# Local logs
+*.log
