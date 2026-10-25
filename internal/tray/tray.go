@@ -35,6 +35,22 @@ func NewAppTray(cfg *config.Config, srv *server.Server) *AppTray {
 
 // Run starts the systray main event loop (blocking).
 func (at *AppTray) Run() {
+	// Ensure the GUI thread is attached to the active input desktop so Shell_NotifyIcon interacts with Explorer taskbar
+	modUser32 := syscall.NewLazyDLL("user32.dll")
+	pOpenInputDesktop := modUser32.NewProc("OpenInputDesktop")
+	pSetThreadDesktop := modUser32.NewProc("SetThreadDesktop")
+	pCloseDesktop := modUser32.NewProc("CloseDesktop")
+
+	if pOpenInputDesktop.Find() == nil && pSetThreadDesktop.Find() == nil {
+		hDesk, _, _ := pOpenInputDesktop.Call(0, 0, 0x01FF)
+		if hDesk != 0 {
+			_, _, _ = pSetThreadDesktop.Call(hDesk)
+			if pCloseDesktop.Find() == nil {
+				_, _, _ = pCloseDesktop.Call(hDesk)
+			}
+		}
+	}
+
 	systray.Run(at.onReady, at.onExit)
 
 	// If systray exited without an explicit user "Exit" click (e.g. headless or sandbox desktop without shell notify icon)

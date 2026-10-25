@@ -198,7 +198,9 @@ func GenerateAndOpenPairingPage(cfg *config.Config) error {
     </div>
 
     <div class="footer-help">
-      <strong>How to turn off:</strong> Look for the camera icon in your taskbar tray (near the clock). Right-click it and choose <strong>Exit</strong> or <strong>Stop Server</strong>.
+      <strong>Where is the tray icon?</strong><br>
+      On Windows 10/11, click the small <strong><code>^</code> (up-arrow chevron)</strong> in your taskbar near the clock. You will see the blue camera icon. You can drag it onto the taskbar to keep it always visible.<br><br>
+      <strong>How to turn off:</strong> Right-click the camera icon in your tray and click <strong>Exit</strong> or <strong>Stop Server</strong>.
     </div>
   </div>
 </body>
