@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -16,22 +17,25 @@ import (
 	"ScreenCapturer/internal/config"
 	"ScreenCapturer/internal/logger"
 	"ScreenCapturer/internal/server"
+	"ScreenCapturer/internal/tunnel"
 )
 
 // AppTray coordinates systray menu items and server lifecycle.
 type AppTray struct {
 	cfg        *config.Config
 	srv        *server.Server
+	tunnelMgr  *tunnel.Manager
 	autoStopMu sync.Mutex
 	autoTimer  *time.Timer
 	userExited bool
 }
 
 // NewAppTray constructs an AppTray instance.
-func NewAppTray(cfg *config.Config, srv *server.Server) *AppTray {
+func NewAppTray(cfg *config.Config, srv *server.Server, tunnelMgr *tunnel.Manager) *AppTray {
 	return &AppTray{
-		cfg: cfg,
-		srv: srv,
+		cfg:       cfg,
+		srv:       srv,
+		tunnelMgr: tunnelMgr,
 	}
 }
 
@@ -77,7 +81,9 @@ func (at *AppTray) onReady() {
 
 	mToggle := systray.AddMenuItem("Stop Server", "Pause or resume the HTTP server")
 	mOpen := systray.AddMenuItem("Open Control Page", "Open local control page in default browser")
-	mCopy := systray.AddMenuItem("Copy Phone Address", "Copy mobile pairing URL to clipboard")
+	mCopyLAN := systray.AddMenuItem("Copy Wi-Fi Address (LAN)", "Copy local Wi-Fi pairing URL to clipboard")
+	mCopyRemote := systray.AddMenuItem("Copy Remote Address (Cellular / WAN)", "Copy Cloudflare public HTTPS URL")
+	mToggleTunnel := systray.AddMenuItem("Toggle Remote Tunnel", "Enable or disable Cloudflare remote access")
 	mShowQR := systray.AddMenuItem("Show Pairing QR Code", "View phone pairing QR code")
 	mRegen := systray.AddMenuItem("Regenerate Token", "Generate a new secret token and invalidate old one")
 
@@ -117,13 +123,27 @@ func (at *AppTray) onReady() {
 				}
 
 			case <-mOpen.ClickedCh:
-				localURL := fmt.Sprintf("http://127.0.0.1:%d/#token=%s", at.cfg.Port, at.cfg.GetToken())
-				openBrowser(localURL)
+				pairingURL := fmt.Sprintf("http://127.0.0.1:%d/pairing", at.cfg.Port)
+				server.OpenBrowser(pairingURL)
 
-			case <-mCopy.ClickedCh:
+			case <-mCopyLAN.ClickedCh:
 				lanIP := server.GetPrimaryLANIP()
 				pairingURL := fmt.Sprintf("http://%s:%d/#token=%s", lanIP, at.cfg.Port, at.cfg.GetToken())
 				copyToClipboard(pairingURL)
+
+			case <-mCopyRemote.ClickedCh:
+				if at.tunnelMgr != nil && at.tunnelMgr.IsActive() {
+					remoteURL := fmt.Sprintf("%s/#token=%s", at.tunnelMgr.GetPublicURL(), at.cfg.GetToken())
+					copyToClipboard(remoteURL)
+				} else {
+					// Open pairing page to check/start tunnel
+					at.showQRCodePage()
+				}
+
+			case <-mToggleTunnel.ClickedCh:
+				if at.tunnelMgr != nil {
+					_, _ = at.tunnelMgr.Toggle()
+				}
 
 			case <-mShowQR.ClickedCh:
 				at.showQRCodePage()
@@ -180,7 +200,7 @@ func (at *AppTray) resetAutoStopTimer(mStatus, mToggle *systray.MenuItem) {
 }
 
 func (at *AppTray) showQRCodePage() {
-	_ = GenerateAndOpenPairingPage(at.cfg)
+	_ = server.GenerateAndOpenPairingPage(at.cfg, at.tunnelMgr)
 }
 
 func (at *AppTray) onExit() {
@@ -190,14 +210,10 @@ func (at *AppTray) onExit() {
 	}
 }
 
-func openBrowser(url string) {
-	cmd := exec.Command("powershell", "-NoProfile", "-Command", "Start-Process", url)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	_ = cmd.Start()
-}
-
+// copyToClipboard pipes text into the built-in Windows clip.exe utility.
 func copyToClipboard(text string) {
-	cmd := exec.Command("powershell", "-NoProfile", "-Command", "Set-Clipboard", "-Value", fmt.Sprintf("'%s'", text))
+	cmd := exec.Command("cmd", "/c", "clip")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	cmd.Stdin = strings.NewReader(text)
 	_ = cmd.Run()
 }

@@ -16,15 +16,16 @@ const AppName = "ScreenCapturer"
 
 // Config holds persistent user configuration.
 type Config struct {
-	Token          string   `json:"token"`
-	Port           int      `json:"port"`
-	AllowedHosts   []string `json:"allowed_hosts"`
-	AutoStopHours  int      `json:"auto_stop_hours"` // 0 = disabled
-	CaptureEngine  string   `json:"capture_engine"`  // "gdi" or "dxgi"
-	DefaultFormat  string   `json:"default_format"`  // "png" or "jpeg"
-	JPEGQuality    int      `json:"jpeg_quality"`    // 1-100, default 90
-	MaxLogSizeMB   int      `json:"max_log_size_mb"` // default 5 MB
-	MaxLogBackups  int      `json:"max_log_backups"` // default 3
+	Token         string   `json:"token"`
+	Port          int      `json:"port"`
+	AllowedHosts  []string `json:"allowed_hosts"`
+	AutoStopHours int      `json:"auto_stop_hours"` // 0 = disabled
+	CaptureEngine string   `json:"capture_engine"`  // "gdi" or "dxgi"
+	DefaultFormat string   `json:"default_format"`  // "png" or "jpeg"
+	JPEGQuality   int      `json:"jpeg_quality"`    // 1-100, default 90
+	MaxLogSizeMB  int      `json:"max_log_size_mb"` // default 5 MB
+	MaxLogBackups int      `json:"max_log_backups"` // default 3
+	EnableTunnel  bool     `json:"enable_tunnel"`   // enable Cloudflare tunnel for cellular/WAN access
 
 	mu sync.RWMutex
 }
@@ -44,6 +45,7 @@ func DefaultConfig() *Config {
 		JPEGQuality:   90,
 		MaxLogSizeMB:  5,
 		MaxLogBackups: 3,
+		EnableTunnel:  true,
 	}
 }
 

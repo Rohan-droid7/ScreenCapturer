@@ -11,10 +11,10 @@ import (
 )
 
 var (
-	ErrLockedOut      = errors.New("too many failed authentication attempts; client locked out for 60s")
-	ErrMissingAuth    = errors.New("missing or malformed Authorization header")
-	ErrInvalidToken   = errors.New("invalid authorization token")
-	ErrInvalidHost    = errors.New("invalid or unauthorized Host header")
+	ErrLockedOut    = errors.New("too many failed authentication attempts; client locked out for 60s")
+	ErrMissingAuth  = errors.New("missing or malformed Authorization header")
+	ErrInvalidToken = errors.New("invalid authorization token")
+	ErrInvalidHost  = errors.New("invalid or unauthorized Host header")
 )
 
 type ipRecord struct {
@@ -53,6 +53,19 @@ func (m *Manager) SetTimeFunc(fn func() time.Time) {
 	m.nowFn = fn
 }
 
+// AddAllowedHost dynamically registers a hostname (e.g. from a Cloudflare tunnel).
+func (m *Manager) AddAllowedHost(host string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	h := strings.TrimSpace(strings.ToLower(host))
+	for _, existing := range m.allowedHosts {
+		if strings.EqualFold(existing, h) {
+			return
+		}
+	}
+	m.allowedHosts = append(m.allowedHosts, h)
+}
+
 // CleanIP extracts the IP address from a host:port RemoteAddr string.
 func CleanIP(remoteAddr string) string {
 	host, _, err := net.SplitHostPort(remoteAddr)
@@ -63,7 +76,7 @@ func CleanIP(remoteAddr string) string {
 	return remoteAddr
 }
 
-// ValidateHost verifies that the Host header matches allowed hosts or local interfaces.
+// ValidateHost verifies that the Host header matches allowed hosts, local interfaces, or active tunnels.
 func (m *Manager) ValidateHost(hostHeader string) bool {
 	if hostHeader == "" {
 		return false
@@ -80,7 +93,17 @@ func (m *Manager) ValidateHost(hostHeader string) bool {
 		return true
 	}
 
-	for _, allowed := range m.allowedHosts {
+	// Always allow Cloudflare Quick Tunnel domains (*.trycloudflare.com)
+	if strings.HasSuffix(host, ".trycloudflare.com") {
+		return true
+	}
+
+	m.mu.Lock()
+	allowedList := make([]string, len(m.allowedHosts))
+	copy(allowedList, m.allowedHosts)
+	m.mu.Unlock()
+
+	for _, allowed := range allowedList {
 		if strings.EqualFold(host, strings.ToLower(allowed)) {
 			return true
 		}

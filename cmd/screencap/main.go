@@ -15,10 +15,12 @@ import (
 	"ScreenCapturer/internal/server"
 	"ScreenCapturer/internal/singleinstance"
 	"ScreenCapturer/internal/tray"
+	"ScreenCapturer/internal/tunnel"
 )
 
 func main() {
 	consoleMode := flag.Bool("console", false, "Run in interactive console mode instead of system tray")
+	enableTunnel := flag.Bool("tunnel", true, "Enable Cloudflare Quick Tunnel for remote/cellular access")
 	flag.Parse()
 
 	if *consoleMode {
@@ -44,7 +46,7 @@ func main() {
 		// An instance is already running in the system tray!
 		// Automatically open the pairing dashboard so the user gets instant visual feedback.
 		if cfg, loadErr := config.LoadOrCreate(); loadErr == nil {
-			_ = tray.GenerateAndOpenPairingPage(cfg)
+			_ = server.GenerateAndOpenPairingPage(cfg, nil)
 		}
 		if *consoleMode {
 			fmt.Println("ScreenCapturer is already running in your system tray.")
@@ -87,8 +89,25 @@ func main() {
 
 	authMgr := auth.NewManager(cfg.GetToken, cfg.AllowedHosts, cfg.Port)
 
-	// 7. HTTP Server
-	srv := server.NewServer(cfg, nativeCap, authMgr)
+	// 7. Tunnel Manager (Cloudflare Quick Tunnel)
+	tunnelMgr := tunnel.NewManager(cfg.Port)
+	tunnelMgr.SetOnURLFound(func(pubURL string) {
+		remoteURL := fmt.Sprintf("%s/#token=%s", pubURL, cfg.GetToken())
+		logInstance.Infof("Remote Cellular URL: %s", remoteURL)
+		if *consoleMode {
+			fmt.Println("----------------------------------------------------------------")
+			fmt.Printf(" Remote Cellular URL (Cloudflare): %s\n", remoteURL)
+			fmt.Println("----------------------------------------------------------------")
+		}
+	})
+
+	if *enableTunnel && cfg.EnableTunnel {
+		logInstance.Infof("Initializing Cloudflare tunnel in background for cellular/WAN access...")
+		_ = tunnelMgr.Start()
+	}
+
+	// 8. HTTP Server
+	srv := server.NewServer(cfg, nativeCap, authMgr, tunnelMgr)
 	logInstance.Infof("Starting HTTP server on :%d...", cfg.Port)
 	if err := srv.Start(); err != nil {
 		logInstance.Errorf("Failed to start server: %v", err)
@@ -99,8 +118,8 @@ func main() {
 	}
 	logInstance.Infof("HTTP server successfully started.")
 
-	// Automatically open the pairing dashboard so the user gets instant reassurance
-	_ = tray.GenerateAndOpenPairingPage(cfg)
+	// Automatically open the pairing dashboard via HTTP (http://127.0.0.1:8765/pairing)
+	_ = server.GenerateAndOpenPairingPage(cfg, tunnelMgr)
 
 	lanIP := server.GetPrimaryLANIP()
 	pairingURL := fmt.Sprintf("http://%s:%d/#token=%s", lanIP, cfg.Port, cfg.GetToken())
@@ -113,9 +132,13 @@ func main() {
 		fmt.Printf(" Server Port      : %d\n", cfg.Port)
 		fmt.Printf(" Capture Engine   : %s\n", nativeCap.Name())
 		fmt.Printf(" Local URL        : %s\n", localURL)
-		fmt.Printf(" Mobile Phone URL : %s\n", pairingURL)
+		fmt.Printf(" Mobile Wi-Fi URL : %s\n", pairingURL)
+		if *enableTunnel && cfg.EnableTunnel {
+			fmt.Println(" Remote (Cellular): Connecting to Cloudflare edge...")
+		}
 		fmt.Println("----------------------------------------------------------------")
-		fmt.Println(" Connect your phone to the same Wi-Fi and open the Mobile URL.   ")
+		fmt.Println(" Option 1: On same Wi-Fi -> Open Mobile Wi-Fi URL               ")
+		fmt.Println(" Option 2: Anywhere/Cellular -> Open Remote Cloudflare URL      ")
 		fmt.Println(" Press Ctrl+C in this console or click Turn Off on the page.    ")
 		fmt.Println("================================================================")
 	}
@@ -126,16 +149,18 @@ func main() {
 	go func() {
 		<-sigChan
 		logInstance.Infof("Shutdown signal received.")
+		_ = tunnelMgr.Stop()
 		srv.TriggerShutdown()
 	}()
 
 	// Launch systray in background goroutine (best effort for Windows shell)
 	go func() {
-		appTray := tray.NewAppTray(cfg, srv)
+		appTray := tray.NewAppTray(cfg, srv, tunnelMgr)
 		appTray.Run()
 	}()
 
 	// Keep server alive until shutdown is requested (via Web UI, stop.bat, tray, or Ctrl+C)
 	srv.WaitForShutdown()
+	_ = tunnelMgr.Stop()
 	logInstance.Infof("ScreenCapturer server stopped.")
 }

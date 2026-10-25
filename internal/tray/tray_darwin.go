@@ -8,21 +8,24 @@ import (
 	"ScreenCapturer/internal/config"
 	"ScreenCapturer/internal/logger"
 	"ScreenCapturer/internal/server"
+	"ScreenCapturer/internal/tunnel"
 )
 
 // AppTray coordinates application lifecycle on macOS.
 // Automatically serves the pairing page and auto-stop timer cleanly.
 type AppTray struct {
-	cfg        *config.Config
-	srv        *server.Server
-	autoTimer  *time.Timer
+	cfg       *config.Config
+	srv       *server.Server
+	tunnelMgr *tunnel.Manager
+	autoTimer *time.Timer
 }
 
 // NewAppTray constructs an AppTray instance.
-func NewAppTray(cfg *config.Config, srv *server.Server) *AppTray {
+func NewAppTray(cfg *config.Config, srv *server.Server, tunnelMgr *tunnel.Manager) *AppTray {
 	return &AppTray{
-		cfg: cfg,
-		srv: srv,
+		cfg:       cfg,
+		srv:       srv,
+		tunnelMgr: tunnelMgr,
 	}
 }
 
@@ -33,7 +36,7 @@ func (at *AppTray) Run() {
 	// Automatically open the pairing control page in the default macOS browser (Safari/Chrome)
 	time.Sleep(200 * time.Millisecond)
 	if at.srv.IsRunning() {
-		_ = GenerateAndOpenPairingPage(at.cfg)
+		_ = server.GenerateAndOpenPairingPage(at.cfg, at.tunnelMgr)
 	}
 
 	// Auto-stop monitor

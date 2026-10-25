@@ -27,6 +27,8 @@ func TestValidateHost(t *testing.T) {
 		{"public internet IP rejected", "8.8.8.8:8765", false},
 		{"arbitrary external domain rejected", "evil-attacker.com", false},
 		{"arbitrary external domain with port rejected", "evil.com:8765", false},
+		{"cloudflare quick tunnel subdomain", "random-words-123.trycloudflare.com", true},
+		{"cloudflare quick tunnel with port", "random-words-123.trycloudflare.com:443", true},
 	}
 
 	for _, tt := range tests {
@@ -36,6 +38,15 @@ func TestValidateHost(t *testing.T) {
 				t.Errorf("ValidateHost(%q) = %v; want %v", tt.host, got, tt.expected)
 			}
 		})
+	}
+
+	// Test dynamically added allowed host
+	if mgr.ValidateHost("custom-domain.net") {
+		t.Errorf("expected custom-domain.net to be rejected initially")
+	}
+	mgr.AddAllowedHost("custom-domain.net")
+	if !mgr.ValidateHost("custom-domain.net:8765") {
+		t.Errorf("expected custom-domain.net to be accepted after AddAllowedHost")
 	}
 }
 
