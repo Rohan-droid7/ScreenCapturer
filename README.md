@@ -47,7 +47,21 @@ ScreenCapturer is engineered with a strict **"Do nothing until requested"** arch
 
 ## 📦 Do You Need to Package the Whole Project?
 
-**No!** You only need **one single file**: `screencap.exe` (~7.4 MB).
+**No!** You only need **`screencap.exe`** (or the release zip containing `screencap.exe` + `stop.bat`).
+
+Users **do NOT** need to clone the repo, install Go, or download the source code.
+
+👉 **Direct Download**: Anyone can download the latest pre-built zip from [**GitHub Releases v1.0.0**](https://github.com/Rohan-droid7341/ScreenCapturer/releases/latest).
+
+---
+
+## 🚀 Download & Quick Start for Anyone
+
+1. Go to the [**Releases Page**](https://github.com/Rohan-droid7341/ScreenCapturer/releases/latest).
+2. Download **`ScreenCapturer-v1.0.0-windows-amd64.zip`**.
+3. Extract the folder anywhere (e.g. `Downloads` or `Desktop`).
+4. Double-click **`screencap.exe`** to start!
+5. To stop it anytime, either click **"Turn Off ScreenCapturer"** in the browser or double-click **`stop.bat`**.
 
 Because all HTML, CSS, and JavaScript are embedded directly inside the compiled binary via `go:embed`, the application requires:
 - ❌ No Node.js / Python / frontend runtime
