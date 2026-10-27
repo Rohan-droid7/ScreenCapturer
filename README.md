@@ -1,6 +1,6 @@
 # ScreenCapturer 📸
 
-A lightweight cross-platform utility for Windows 10/11 & macOS that lets you capture your laptop's screen directly from your phone — **over local Wi-Fi OR over cellular data (4G/5G) from anywhere** via built-in Cloudflare Quick Tunnels!
+A lightweight cross-platform utility for Windows 10/11 & macOS that lets you capture your laptop's screen directly from your phone — **over local Wi-Fi OR over cellular data (4G/5G) from anywhere** via built-in Cloudflare Quick Tunnels, **plus instant remote workstation locking (Win + L)** directly from your phone!
 
 No accounts, no router configuration, no port forwarding, no video recording, no background polling, and 0% CPU while idle.
 
@@ -52,6 +52,16 @@ You have **two seamless connection modes**:
 2. Select the **🌐 Anywhere / Cellular** tab on the dashboard.
 3. Scan the Cloudflare HTTPS QR code (`https://xxx.trycloudflare.com`) with your phone.
 4. Tap **Capture** — end-to-end encrypted screen delivery over the internet.
+
+---
+
+### 🔒 Remote "Boss / Panic" Lock (Win + L from Phone)
+
+Left your computer unlocked at your desk, in a library, coffee shop, or someone suddenly walks up to your desk?
+
+- Tap the red **`🔒 Lock PC`** button on your mobile screen.
+- ScreenCapturer instantly triggers `LockWorkStation` on Windows (equivalent to pressing **`Win + L`**) or displaysleep on macOS.
+- Session is securely locked right away — without touching your laptop keyboard!
 
 <p align="center">
   <img src="docs/images/mobile-capture-desktop.jpg" width="300" alt="Mobile Capture Desktop Preview" />

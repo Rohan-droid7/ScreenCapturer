@@ -121,6 +121,18 @@ body {
   align-items: center;
 }
 
+.notice-box {
+  background-color: #052e16;
+  border: 1px solid #166534;
+  color: #86efac;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .btn-close {
   background: transparent;
   border: none;
@@ -163,12 +175,13 @@ body {
 /* Capture Action */
 .action-row {
   display: flex;
+  gap: 10px;
   justify-content: center;
   padding: 4px 0;
 }
 
 .btn-capture {
-  width: 100%;
+  flex: 2;
   height: 50px;
   border-radius: 8px;
   border: none;
@@ -194,6 +207,40 @@ body {
   cursor: not-allowed;
 }
 
+
+
+.btn-lock {
+  flex: 1;
+  height: 50px;
+  border-radius: 8px;
+  border: 1px solid var(--danger-border);
+  background: #180d0e;
+  color: #f87171;
+  font-size: 0.95rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.btn-lock:hover {
+  background: #7f1d1d;
+  color: #ffffff;
+}
+
+.btn-lock:active {
+  background: #991b1b;
+  transform: scale(0.98);
+}
+
+.btn-lock:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .spinner {
   width: 16px;
   height: 16px;

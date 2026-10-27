@@ -189,3 +189,121 @@ func TestServerCaptureLockedScreenError(t *testing.T) {
 func init() {
 	_ = color.RGBA{}
 }
+
+func TestServerLockUnauthorized(t *testing.T) {
+	mockCap := &mockCapturer{img: createTestImage(10, 10)}
+	srv, _ := setupTestServer(mockCap, "secret-token")
+
+	tests := []struct {
+		name       string
+		authHeader string
+		host       string
+		method     string
+		wantCode   int
+	}{
+		{
+			name:       "Missing auth header",
+			authHeader: "",
+			host:       "localhost:8765",
+			method:     "POST",
+			wantCode:   http.StatusUnauthorized,
+		},
+		{
+			name:       "Invalid bearer token",
+			authHeader: "Bearer wrong-token",
+			host:       "localhost:8765",
+			method:     "POST",
+			wantCode:   http.StatusUnauthorized,
+		},
+		{
+			name:       "Invalid method GET on /api/lock",
+			authHeader: "Bearer secret-token",
+			host:       "localhost:8765",
+			method:     "GET",
+			wantCode:   http.StatusMethodNotAllowed,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, "/api/lock", nil)
+			req.Host = tt.host
+			req.RemoteAddr = "127.0.0.1:50000"
+			if tt.authHeader != "" {
+				req.Header.Set("Authorization", tt.authHeader)
+			}
+			w := httptest.NewRecorder()
+			srv.handleLockPC(w, req)
+
+			if w.Code != tt.wantCode {
+				t.Errorf("expected status %d, got %d", tt.wantCode, w.Code)
+			}
+		})
+	}
+}
+
+func TestServerLockSuccess(t *testing.T) {
+	mockCap := &mockCapturer{img: createTestImage(10, 10)}
+	srv, _ := setupTestServer(mockCap, "secret-token")
+
+	called := 0
+	srv.SetLockFunc(func() error {
+		called++
+		return nil
+	})
+
+	req := httptest.NewRequest("POST", "/api/lock", nil)
+	req.Host = "127.0.0.1:8765"
+	req.RemoteAddr = "127.0.0.1:50000"
+	req.Header.Set("Authorization", "Bearer secret-token")
+
+	w := httptest.NewRecorder()
+	srv.handleLockPC(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d", w.Code)
+	}
+
+	if called != 1 {
+		t.Errorf("expected lockFunc to be called once, got %d", called)
+	}
+
+	var res map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if res["status"] != "locked" {
+		t.Errorf("expected status 'locked', got %s", res["status"])
+	}
+}
+
+func TestServerLockFailure(t *testing.T) {
+	mockCap := &mockCapturer{img: createTestImage(10, 10)}
+	srv, _ := setupTestServer(mockCap, "secret-token")
+
+	srv.SetLockFunc(func() error {
+		return errors.New("mock OS lock error")
+	})
+
+	req := httptest.NewRequest("POST", "/api/lock", nil)
+	req.Host = "127.0.0.1:8765"
+	req.RemoteAddr = "127.0.0.1:50000"
+	req.Header.Set("Authorization", "Bearer secret-token")
+
+	w := httptest.NewRecorder()
+	srv.handleLockPC(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500 Internal Server Error, got %d", w.Code)
+	}
+
+	var res errorResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil {
+		t.Fatalf("failed to decode error response: %v", err)
+	}
+
+	if res.Code != "LOCK_FAILED" {
+		t.Errorf("expected code LOCK_FAILED, got %s", res.Code)
+	}
+}

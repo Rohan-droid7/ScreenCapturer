@@ -29,17 +29,27 @@
         <button id="dismissError" class="btn-close">&times;</button>
       </div>
 
+      <!-- Success / Notice Banner -->
+      <div id="noticeBanner" class="notice-box hidden">
+        <span id="noticeMessage"></span>
+        <button id="dismissNotice" class="btn-close">&times;</button>
+      </div>
+
       <!-- Token Pairing Input (only if opened without token) -->
       <div id="tokenBanner" class="token-box hidden">
         <input type="password" id="manualTokenInput" placeholder="Enter token" />
         <button id="saveTokenBtn" class="btn-primary">Connect</button>
       </div>
 
-      <!-- Capture Button -->
+      <!-- Capture & Panic Lock Actions -->
       <div class="action-row">
         <button id="captureBtn" class="btn-capture">
           <span class="spinner hidden" id="captureSpinner"></span>
-          <span id="captureText">Capture</span>
+          <span id="captureText">📸 Capture Screen</span>
+        </button>
+        <button id="lockBtn" class="btn-lock" title="Panic Lock: Lock PC immediately (Win + L)">
+          <span class="spinner hidden" id="lockSpinner"></span>
+          <span id="lockText">🔒 Lock PC</span>
         </button>
       </div>
 

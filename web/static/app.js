@@ -19,6 +19,12 @@
   const manualTokenInput = document.getElementById('manualTokenInput');
   const saveTokenBtn = document.getElementById('saveTokenBtn');
   const turnOffBtn = document.getElementById('turnOffBtn');
+  const lockBtn = document.getElementById('lockBtn');
+  const lockSpinner = document.getElementById('lockSpinner');
+  const lockText = document.getElementById('lockText');
+  const noticeBanner = document.getElementById('noticeBanner');
+  const noticeMessage = document.getElementById('noticeMessage');
+  const dismissNotice = document.getElementById('dismissNotice');
 
   let currentBlobUrl = null;
   let currentFile = null;
@@ -60,6 +66,22 @@
   });
 
   dismissError.addEventListener('click', hideError);
+
+  function showNotice(msg) {
+    if (noticeMessage && noticeBanner) {
+      noticeMessage.textContent = msg;
+      noticeBanner.classList.remove('hidden');
+      setTimeout(() => hideNotice(), 6000);
+    }
+  }
+
+  function hideNotice() {
+    if (noticeBanner) noticeBanner.classList.add('hidden');
+  }
+
+  if (dismissNotice) {
+    dismissNotice.addEventListener('click', hideNotice);
+  }
 
   function showError(msg) {
     errorMessage.textContent = msg;
@@ -120,6 +142,8 @@
           updateTokenBanner();
         } else if (resp.status === 429) {
           showError(`Rate Limited: ${errDesc}`);
+        } else if (resp.status === 503 || (errDesc && errDesc.toLowerCase().includes('locked'))) {
+          showError(`🔒 Computer is locked (${errDesc}). Unlock on PC to resume captures.`);
         } else {
           showError(`Error: ${errDesc}`);
         }
@@ -188,6 +212,61 @@
       }
     }
   });
+
+    if (lockBtn) {
+    lockBtn.addEventListener('click', async function () {
+      const token = getToken();
+      if (!token) {
+        showError('No access token found. Please pair using the QR code or enter your token.');
+        updateTokenBanner();
+        return;
+      }
+
+      if (!confirm('Lock your computer workstation now (Win + L / Panic Lock)?\n\nYour session will be locked immediately.')) {
+        return;
+      }
+
+      hideError();
+      hideNotice();
+
+      lockBtn.disabled = true;
+      if (lockSpinner) lockSpinner.classList.remove('hidden');
+      if (lockText) lockText.textContent = 'Locking...';
+
+      try {
+        const resp = await fetch('/api/lock', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + token
+          }
+        });
+
+        if (!resp.ok) {
+          let errDesc = 'Lock failed (' + resp.status + ')';
+          try {
+            const json = await resp.json();
+            if (json && json.error) errDesc = json.error;
+          } catch (_) {}
+          showError('Failed to lock: ' + errDesc);
+          return;
+        }
+
+        showNotice('🔒 Workstation locked successfully! (Win + L applied)');
+        if (lockText) lockText.textContent = '✅ Locked!';
+        setTimeout(() => {
+          if (lockText) lockText.textContent = '🔒 Lock PC';
+        }, 3000);
+      } catch (err) {
+        showError('Network connection error: ' + (err.message || 'Server unreachable'));
+      } finally {
+        lockBtn.disabled = false;
+        if (lockSpinner) lockSpinner.classList.add('hidden');
+        if (lockText && lockText.textContent !== '✅ Locked!') {
+          lockText.textContent = '🔒 Lock PC';
+        }
+      }
+    });
+  }
 
   if (turnOffBtn) {
     turnOffBtn.addEventListener('click', async function () {

@@ -35,6 +35,7 @@ type Server struct {
 	onCaptureCb  func() // Optional callback when a capture succeeds
 	shutdownChan chan struct{}
 	shutdownOnce sync.Once
+	lockFunc     func() error
 }
 
 // NewServer constructs the HTTP server with timeouts and routes.
@@ -50,6 +51,7 @@ func NewServer(cfg *config.Config, capturer capture.Capturer, authMgr *auth.Mana
 		authMgr:      authMgr,
 		tunnelMgr:    tm,
 		shutdownChan: make(chan struct{}),
+		lockFunc:     LockPC,
 	}
 	return s
 }
@@ -71,6 +73,13 @@ func (s *Server) SetOnCaptureCallback(cb func()) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.onCaptureCb = cb
+}
+
+// SetLockFunc overrides the workstation lock handler (useful for testing or platform customization).
+func (s *Server) SetLockFunc(fn func() error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.lockFunc = fn
 }
 
 // GetPrimaryLANIP returns the first non-loopback private IPv4 address.
@@ -131,6 +140,7 @@ func (s *Server) Start() error {
 	// API endpoints
 	mux.HandleFunc("/api/status", s.handleStatus)
 	mux.HandleFunc("/api/capture", s.handleCapture)
+	mux.HandleFunc("/api/lock", s.handleLockPC)
 	mux.HandleFunc("/api/shutdown", s.handleShutdown)
 	mux.HandleFunc("/api/tunnel/status", s.handleTunnelStatus)
 	mux.HandleFunc("/api/tunnel/toggle", s.handleTunnelToggle)
@@ -435,4 +445,54 @@ func (s *Server) handleShutdown(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(200 * time.Millisecond)
 		_ = s.Stop()
 	}()
+}
+
+func (s *Server) handleLockPC(w http.ResponseWriter, r *http.Request) {
+	if enableCORS(w, r) {
+		return
+	}
+	if r.Method != http.MethodPost {
+		sendJSONError(w, http.StatusMethodNotAllowed, "Method not allowed; use POST", "METHOD_NOT_ALLOWED")
+		return
+	}
+
+	// Limit request body
+	r.Body = http.MaxBytesReader(w, r.Body, 1024)
+
+	// Authenticate request & check rate limits / lockout
+	if err := s.authMgr.CheckRequest(r); err != nil {
+		if errors.Is(err, auth.ErrLockedOut) {
+			sendJSONError(w, http.StatusTooManyRequests, err.Error(), "IP_LOCKED_OUT")
+			return
+		}
+		if errors.Is(err, auth.ErrInvalidHost) {
+			sendJSONError(w, http.StatusBadRequest, "Invalid or unauthorized Host header", "INVALID_HOST")
+			return
+		}
+		sendJSONError(w, http.StatusUnauthorized, "Unauthorized: "+err.Error(), "UNAUTHORIZED")
+		return
+	}
+
+	logger.Get().Infof("Remote workstation lock requested from %s", auth.CleanIP(r.RemoteAddr))
+
+	s.mu.Lock()
+	lockFn := s.lockFunc
+	s.mu.Unlock()
+
+	if lockFn == nil {
+		lockFn = LockPC
+	}
+
+	if err := lockFn(); err != nil {
+		logger.Get().Errorf("Workstation lock failed: %v", err)
+		sendJSONError(w, http.StatusInternalServerError, "Failed to lock workstation: "+err.Error(), "LOCK_FAILED")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"status":  "locked",
+		"message": "Workstation locked successfully.",
+	})
 }
