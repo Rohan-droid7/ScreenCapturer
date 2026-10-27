@@ -11,7 +11,7 @@ No cloud, no accounts, no video recording, no background polling, no snipping to
 You **do NOT** need to install Go, Node.js, or any programming tools. Download the pre-built package for your OS:
 
 ### 1. Download
-👉 **[Go to GitHub Releases v1.0.0](https://github.com/Rohan-droid7341/ScreenCapturer/releases/latest)**
+👉 **[Go to GitHub Releases v1.0.0](https://github.com/Rohan-droid7/ScreenCapturer/releases/latest)**
 
 - **Windows 10 / 11:** Download `ScreenCapturer-v1.0.0-windows-amd64.zip`
 - **macOS (Apple Silicon M1/M2/M3/M4):** Download `ScreenCapturer-v1.0.0-darwin-arm64.zip`
@@ -94,7 +94,7 @@ If you have Go installed and want to build the executable yourself:
 
 ```powershell
 # 1. Clone repository
-git clone https://github.com/Rohan-droid7341/ScreenCapturer.git
+git clone https://github.com/Rohan-droid7/ScreenCapturer.git
 cd ScreenCapturer
 
 # 2. Build the production GUI binary (silent background window)
