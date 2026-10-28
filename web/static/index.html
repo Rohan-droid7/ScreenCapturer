@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ScreenCapturer</title>
-  <link rel="stylesheet" href="style.css?v=1.2.0">
+  <link rel="stylesheet" href="style.css?v=1.3.0">
 </head>
 <body>
   <div class="app-container">
@@ -90,6 +90,23 @@
           <img id="previewImage" alt="Screen Capture" />
         </div>
       </div>
+
+      <!-- Capture History Filmstrip -->
+      <section id="historySection" class="card history-card hidden">
+        <div class="card-header">
+          <div class="history-title-group">
+            <span class="card-title">🎞️ Recent Captures</span>
+            <span id="historyCount" class="history-count">0/10</span>
+          </div>
+          <button id="clearHistoryBtn" class="btn-link" title="Clear all recent capture history">Clear All</button>
+        </div>
+
+        <div class="filmstrip-container">
+          <div id="filmstripTrack" class="filmstrip-track" role="list" aria-label="Recent captures">
+            <!-- Thumbnails injected dynamically -->
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer class="app-footer">
@@ -97,6 +114,6 @@
     </footer>
   </div>
 
-  <script src="app.js?v=1.2.0"></script>
+  <script src="app.js?v=1.3.0"></script>
 </body>
 </html>

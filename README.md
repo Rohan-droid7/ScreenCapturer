@@ -73,6 +73,18 @@ Effortlessly bridge your phone and computer without messaging apps or email draf
 
 - **📥 Get PC Clipboard:** Tap to grab whatever text, URL, or code snippet is currently copied on your laptop. Includes a one-tap **Copy on Phone** option.
 - **📤 Send to PC:** Type or paste text on your phone and tap **Send to PC** — it is immediately placed on your laptop's system clipboard, ready to paste with **Ctrl + V**!
+
+
+---
+
+### 🎞️ Capture History Filmstrip (Last 10 Captures)
+
+Never lose a previous screenshot while monitoring your computer from your phone:
+
+- **Scrollable Mini-Gallery:** A responsive, touch-friendly filmstrip appears directly below your preview with timestamp badges (13:10:45) and format indicators.
+- **Persistent Storage:** Stored in browser IndexedDB — your captures remain available even after refreshing or reopening your mobile browser!
+- **Tap to Switch:** Tap any thumbnail in the filmstrip to inspect, download, or share that specific screenshot.
+- **Auto-Eviction & Privacy:** Automatically keeps the last 10 captures and deletes older ones to save space, with individual removal (×) and **Clear All** controls.
 <p align="center">
   <img src="docs/images/mobile-capture-desktop.jpg" width="300" alt="Mobile Capture Desktop Preview" />
   &nbsp;&nbsp;&nbsp;&nbsp;

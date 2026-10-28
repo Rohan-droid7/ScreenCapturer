@@ -35,6 +35,10 @@
   const sendClipText = document.getElementById('sendClipText');
   const copyPhoneBtn = document.getElementById('copyPhoneBtn');
   const clearClipBtn = document.getElementById('clearClipBtn');
+  const historySection = document.getElementById('historySection');
+  const historyCount = document.getElementById('historyCount');
+  const filmstripTrack = document.getElementById('filmstripTrack');
+  const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 
   let currentBlobUrl = null;
   let currentFile = null;
@@ -180,6 +184,19 @@
       const sizeKB = Math.round(blob.size / 1024);
       captureMeta.textContent = `${ext.toUpperCase()} • ${sizeKB} KB • ${roundTripMs} ms roundtrip`;
       timingInfo.textContent = `Delivered in ${roundTripMs} ms`;
+
+      // Save to Capture History Filmstrip
+      const timeFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      addCaptureToHistory({
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        timeFormatted: timeFormatted,
+        format: format,
+        sizeKB: sizeKB,
+        roundTripMs: roundTripMs,
+        blob: blob,
+        filename: filename
+      });
 
       // Web share setup
       if (canShareFiles()) {
@@ -413,6 +430,250 @@
     });
   }
 
+
+  // ==========================================
+  // Capture History Filmstrip (IndexedDB + Memory)
+  // ==========================================
+  const MAX_HISTORY = 10;
+  let captureHistory = [];
+  let activeHistoryId = null;
+  const historyUrls = new Map();
+
+  const DB_NAME = 'ScreenCapturerDB';
+  const DB_VERSION = 1;
+  const STORE_NAME = 'captures';
+  let dbPromise = null;
+
+  function getDB() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve) => {
+      if (!('indexedDB' in window)) {
+        resolve(null);
+        return;
+      }
+      try {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = function (e) {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          }
+        };
+        req.onsuccess = function (e) {
+          resolve(e.target.result);
+        };
+        req.onerror = function () {
+          resolve(null);
+        };
+      } catch (_) {
+        resolve(null);
+      }
+    });
+    return dbPromise;
+  }
+
+  async function loadHistoryFromStorage() {
+    try {
+      const db = await getDB();
+      if (!db) return;
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.getAll();
+      req.onsuccess = function () {
+        const items = req.result || [];
+        items.sort((a, b) => b.id - a.id);
+        captureHistory = items.slice(0, MAX_HISTORY);
+        if (captureHistory.length > 0) {
+          renderFilmstrip(captureHistory[0].id);
+          selectHistoryItem(captureHistory[0].id, false);
+        }
+      };
+    } catch (_) {}
+  }
+
+  async function persistCapture(item) {
+    try {
+      const db = await getDB();
+      if (!db) return;
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      store.put(item);
+
+      const getAllReq = store.getAllKeys();
+      getAllReq.onsuccess = function () {
+        const keys = getAllReq.result || [];
+        if (keys.length > MAX_HISTORY) {
+          keys.sort((a, b) => b - a);
+          for (let i = MAX_HISTORY; i < keys.length; i++) {
+            store.delete(keys[i]);
+          }
+        }
+      };
+    } catch (_) {}
+  }
+
+  async function removeCaptureFromStorage(id) {
+    try {
+      const db = await getDB();
+      if (!db) return;
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      tx.objectStore(STORE_NAME).delete(id);
+    } catch (_) {}
+  }
+
+  async function clearStorage() {
+    try {
+      const db = await getDB();
+      if (!db) return;
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      tx.objectStore(STORE_NAME).clear();
+    } catch (_) {}
+  }
+
+  function getBlobUrl(item) {
+    if (!historyUrls.has(item.id)) {
+      historyUrls.set(item.id, URL.createObjectURL(item.blob));
+    }
+    return historyUrls.get(item.id);
+  }
+
+  function renderFilmstrip(selectedId) {
+    if (!historySection || !filmstripTrack) return;
+
+    if (captureHistory.length === 0) {
+      historySection.classList.add('hidden');
+      return;
+    }
+
+    historySection.classList.remove('hidden');
+    if (historyCount) {
+      historyCount.textContent = captureHistory.length + '/' + MAX_HISTORY;
+    }
+
+    const currentIds = new Set(captureHistory.map(i => i.id));
+    for (const [id, url] of historyUrls.entries()) {
+      if (!currentIds.has(id)) {
+        URL.revokeObjectURL(url);
+        historyUrls.delete(id);
+      }
+    }
+
+    filmstripTrack.innerHTML = '';
+    captureHistory.forEach(item => {
+      const url = getBlobUrl(item);
+      const div = document.createElement('div');
+      div.className = 'filmstrip-item' + (item.id === selectedId ? ' active' : '');
+      div.setAttribute('data-id', item.id);
+      div.setAttribute('role', 'listitem');
+
+      div.innerHTML = `
+        <div class="thumb-frame">
+          <img src="${url}" alt="Capture ${item.timeFormatted}" loading="lazy" />
+          <span class="thumb-badge">${item.timeFormatted}</span>
+        </div>
+        <button class="thumb-del-btn" title="Remove capture" data-del-id="${item.id}">&times;</button>
+      `;
+
+      div.addEventListener('click', function (e) {
+        if (e.target.closest('.thumb-del-btn')) {
+          e.stopPropagation();
+          deleteHistoryItem(item.id);
+          return;
+        }
+        selectHistoryItem(item.id, true);
+      });
+
+      filmstripTrack.appendChild(div);
+    });
+  }
+
+  function selectHistoryItem(id, scrollIntoView) {
+    activeHistoryId = id;
+    const item = captureHistory.find(i => i.id === id);
+    if (!item) return;
+
+    document.querySelectorAll('.filmstrip-item').forEach(el => {
+      el.classList.toggle('active', el.getAttribute('data-id') == id);
+    });
+
+    const url = getBlobUrl(item);
+    previewImage.src = url;
+    downloadLink.href = url;
+    downloadLink.download = item.filename;
+    captureMeta.textContent = item.format.toUpperCase() + ' • ' + item.sizeKB + ' KB • ' + item.timeFormatted;
+    timingInfo.textContent = 'Viewing capture from ' + item.timeFormatted;
+
+    if (canShareFiles()) {
+      try {
+        currentFile = new File([item.blob], item.filename, { type: item.blob.type });
+        if (navigator.canShare && navigator.canShare({ files: [currentFile] })) {
+          shareBtn.classList.remove('hidden');
+        } else {
+          shareBtn.classList.add('hidden');
+        }
+      } catch (_) {
+        shareBtn.classList.add('hidden');
+      }
+    }
+
+    previewSection.classList.remove('hidden');
+    if (scrollIntoView) {
+      previewSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  function addCaptureToHistory(item) {
+    captureHistory.unshift(item);
+    if (captureHistory.length > MAX_HISTORY) {
+      const removed = captureHistory.pop();
+      if (removed && historyUrls.has(removed.id)) {
+        URL.revokeObjectURL(historyUrls.get(removed.id));
+        historyUrls.delete(removed.id);
+      }
+    }
+    persistCapture(item);
+    renderFilmstrip(item.id);
+    activeHistoryId = item.id;
+  }
+
+  function deleteHistoryItem(id) {
+    const idx = captureHistory.findIndex(i => i.id === id);
+    if (idx === -1) return;
+    captureHistory.splice(idx, 1);
+    if (historyUrls.has(id)) {
+      URL.revokeObjectURL(historyUrls.get(id));
+      historyUrls.delete(id);
+    }
+    removeCaptureFromStorage(id);
+
+    if (activeHistoryId === id) {
+      if (captureHistory.length > 0) {
+        selectHistoryItem(captureHistory[0].id, false);
+      } else {
+        previewSection.classList.add('hidden');
+        previewImage.src = '';
+      }
+    }
+    renderFilmstrip(activeHistoryId);
+  }
+
+  if (clearHistoryBtn) {
+    clearHistoryBtn.addEventListener('click', function () {
+      if (captureHistory.length === 0) return;
+      if (!confirm('Clear all recent capture history?')) return;
+      for (const url of historyUrls.values()) {
+        URL.revokeObjectURL(url);
+      }
+      historyUrls.clear();
+      captureHistory = [];
+      clearStorage();
+      renderFilmstrip(null);
+      previewSection.classList.add('hidden');
+      previewImage.src = '';
+      showNotice('🗑️ Capture history cleared.');
+    });
+  }
+
   if (turnOffBtn) {
     turnOffBtn.addEventListener('click', async function () {
       if (!confirm('Are you sure you want to turn off ScreenCapturer on your laptop?\n\nThe background agent will exit immediately.')) {
@@ -439,4 +700,5 @@
   // Initialization
   checkUrlFragmentToken();
   updateTokenBanner();
+  loadHistoryFromStorage();
 })();
