@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"runtime/debug"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"ScreenCapturer/internal/auth"
+	"ScreenCapturer/internal/clipboard"
 	"ScreenCapturer/internal/capture"
 	"ScreenCapturer/internal/config"
 	"ScreenCapturer/internal/logger"
@@ -36,6 +38,8 @@ type Server struct {
 	shutdownChan chan struct{}
 	shutdownOnce sync.Once
 	lockFunc     func() error
+	clipReadFunc  func() (string, error)
+	clipWriteFunc func(string) error
 }
 
 // NewServer constructs the HTTP server with timeouts and routes.
@@ -52,6 +56,8 @@ func NewServer(cfg *config.Config, capturer capture.Capturer, authMgr *auth.Mana
 		tunnelMgr:    tm,
 		shutdownChan: make(chan struct{}),
 		lockFunc:     LockPC,
+		clipReadFunc:  clipboard.Read,
+		clipWriteFunc: clipboard.Write,
 	}
 	return s
 }
@@ -80,6 +86,13 @@ func (s *Server) SetLockFunc(fn func() error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.lockFunc = fn
+}
+// SetClipboardFuncs overrides clipboard read/write handlers (useful for testing or platform customization).
+func (s *Server) SetClipboardFuncs(readFn func() (string, error), writeFn func(string) error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.clipReadFunc = readFn
+	s.clipWriteFunc = writeFn
 }
 
 // GetPrimaryLANIP returns the first non-loopback private IPv4 address.
@@ -141,6 +154,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/status", s.handleStatus)
 	mux.HandleFunc("/api/capture", s.handleCapture)
 	mux.HandleFunc("/api/lock", s.handleLockPC)
+	mux.HandleFunc("/api/clipboard", s.handleClipboard)
 	mux.HandleFunc("/api/shutdown", s.handleShutdown)
 	mux.HandleFunc("/api/tunnel/status", s.handleTunnelStatus)
 	mux.HandleFunc("/api/tunnel/toggle", s.handleTunnelToggle)
@@ -494,5 +508,93 @@ func (s *Server) handleLockPC(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{
 		"status":  "locked",
 		"message": "Workstation locked successfully.",
+	})
+}
+
+func (s *Server) handleClipboard(w http.ResponseWriter, r *http.Request) {
+	if enableCORS(w, r) {
+		return
+	}
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		sendJSONError(w, http.StatusMethodNotAllowed, "Method not allowed; use GET or POST", "METHOD_NOT_ALLOWED")
+		return
+	}
+
+	// Authenticate request & check rate limits / lockout
+	if err := s.authMgr.CheckRequest(r); err != nil {
+		if errors.Is(err, auth.ErrLockedOut) {
+			sendJSONError(w, http.StatusTooManyRequests, err.Error(), "IP_LOCKED_OUT")
+			return
+		}
+		if errors.Is(err, auth.ErrInvalidHost) {
+			sendJSONError(w, http.StatusBadRequest, "Invalid or unauthorized Host header", "INVALID_HOST")
+			return
+		}
+		sendJSONError(w, http.StatusUnauthorized, "Unauthorized: "+err.Error(), "UNAUTHORIZED")
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		s.mu.Lock()
+		readFn := s.clipReadFunc
+		s.mu.Unlock()
+		if readFn == nil {
+			readFn = clipboard.Read
+		}
+
+		text, err := readFn()
+		if err != nil && !errors.Is(err, clipboard.ErrNoText) {
+			logger.Get().Errorf("Clipboard read failed: %v", err)
+			sendJSONError(w, http.StatusInternalServerError, "Failed to read clipboard: "+err.Error(), "CLIPBOARD_READ_FAILED")
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(clipboard.Content{
+			Text:    text,
+			Length:  len([]rune(text)),
+			HasText: text != "",
+		})
+		return
+	}
+
+	// POST - Update PC clipboard
+	r.Body = http.MaxBytesReader(w, r.Body, 2*1024*1024)
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		sendJSONError(w, http.StatusBadRequest, "Failed to read request body: "+err.Error(), "BAD_REQUEST")
+		return
+	}
+
+	type clipReq struct {
+		Text string `json:"text"`
+	}
+	var req clipReq
+	if json.Unmarshal(bodyBytes, &req) != nil || req.Text == "" {
+		req.Text = string(bodyBytes)
+	}
+
+	s.mu.Lock()
+	writeFn := s.clipWriteFunc
+	s.mu.Unlock()
+	if writeFn == nil {
+		writeFn = clipboard.Write
+	}
+
+	if err := writeFn(req.Text); err != nil {
+		logger.Get().Errorf("Clipboard write failed: %v", err)
+		sendJSONError(w, http.StatusInternalServerError, "Failed to write clipboard: "+err.Error(), "CLIPBOARD_WRITE_FAILED")
+		return
+	}
+
+	logger.Get().Infof("Clipboard updated from %s (%d chars)", auth.CleanIP(r.RemoteAddr), len([]rune(req.Text)))
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"status":  "success",
+		"message": "Clipboard updated successfully on PC",
+		"length":  len([]rune(req.Text)),
 	})
 }

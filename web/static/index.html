@@ -53,6 +53,29 @@
         </button>
       </div>
 
+      <!-- 2-Way Clipboard Sync -->
+      <section class="card clipboard-card">
+        <div class="card-header">
+          <span class="card-title">📋 Clipboard Sync</span>
+          <span id="clipMeta" class="meta-tag">2-Way Sync</span>
+        </div>
+        <textarea id="clipInput" class="clip-textarea" rows="3" placeholder="Type or paste text to send to PC, or tap 'Get PC Clipboard'..."></textarea>
+        <div class="clip-actions">
+          <button id="getClipBtn" class="btn-secondary clip-btn" title="Fetch current text from PC clipboard">
+            <span class="spinner hidden" id="getClipSpinner"></span>
+            <span id="getClipText">📥 Get PC Clipboard</span>
+          </button>
+          <button id="sendClipBtn" class="btn-primary clip-btn" title="Send text from phone to PC clipboard">
+            <span class="spinner hidden" id="sendClipSpinner"></span>
+            <span id="sendClipText">📤 Send to PC</span>
+          </button>
+        </div>
+        <div class="clip-sub-actions">
+          <button id="copyPhoneBtn" class="btn-link hidden" title="Copy to phone clipboard">📋 Copy on Phone</button>
+          <button id="clearClipBtn" class="btn-link" title="Clear text">Clear</button>
+        </div>
+      </section>
+
       <!-- Preview Card -->
       <div id="previewSection" class="preview-card hidden">
         <div class="preview-bar">

@@ -25,6 +25,16 @@
   const noticeBanner = document.getElementById('noticeBanner');
   const noticeMessage = document.getElementById('noticeMessage');
   const dismissNotice = document.getElementById('dismissNotice');
+  const clipInput = document.getElementById('clipInput');
+  const clipMeta = document.getElementById('clipMeta');
+  const getClipBtn = document.getElementById('getClipBtn');
+  const getClipSpinner = document.getElementById('getClipSpinner');
+  const getClipText = document.getElementById('getClipText');
+  const sendClipBtn = document.getElementById('sendClipBtn');
+  const sendClipSpinner = document.getElementById('sendClipSpinner');
+  const sendClipText = document.getElementById('sendClipText');
+  const copyPhoneBtn = document.getElementById('copyPhoneBtn');
+  const clearClipBtn = document.getElementById('clearClipBtn');
 
   let currentBlobUrl = null;
   let currentFile = null;
@@ -265,6 +275,141 @@
           lockText.textContent = '🔒 Lock PC';
         }
       }
+    });
+  }
+
+  // 3. Clipboard Sync Handlers
+  if (getClipBtn) {
+    getClipBtn.addEventListener('click', async function () {
+      const token = getToken();
+      if (!token) {
+        showError('No access token found. Please pair using the QR code or enter your token.');
+        updateTokenBanner();
+        return;
+      }
+
+      hideError();
+      getClipBtn.disabled = true;
+      if (getClipSpinner) getClipSpinner.classList.remove('hidden');
+      if (getClipText) getClipText.textContent = 'Fetching...';
+
+      try {
+        const resp = await fetch('/api/clipboard', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (!resp.ok) {
+          let errDesc = 'Failed to fetch clipboard (' + resp.status + ')';
+          try {
+            const json = await resp.json();
+            if (json && json.error) errDesc = json.error;
+          } catch (_) {}
+          showError(errDesc);
+          return;
+        }
+
+        const data = await resp.json();
+        if (data.has_text) {
+          if (clipInput) clipInput.value = data.text;
+          if (clipMeta) clipMeta.textContent = data.length + ' chars';
+          showNotice('📋 PC clipboard grabbed (' + data.length + ' chars)!');
+          if (copyPhoneBtn) copyPhoneBtn.classList.remove('hidden');
+        } else {
+          if (clipInput) clipInput.value = '';
+          if (clipMeta) clipMeta.textContent = 'Empty';
+          showNotice('ℹ️ PC clipboard is currently empty.');
+        }
+      } catch (err) {
+        showError('Network error: ' + (err.message || 'Server unreachable'));
+      } finally {
+        getClipBtn.disabled = false;
+        if (getClipSpinner) getClipSpinner.classList.add('hidden');
+        if (getClipText) getClipText.textContent = '📥 Get PC Clipboard';
+      }
+    });
+  }
+
+  if (sendClipBtn) {
+    sendClipBtn.addEventListener('click', async function () {
+      const token = getToken();
+      if (!token) {
+        showError('No access token found. Please pair using the QR code or enter your token.');
+        updateTokenBanner();
+        return;
+      }
+
+      const text = clipInput ? clipInput.value : '';
+      if (!text || text.trim() === '') {
+        showError('Please type or paste text into the clipboard box before sending to PC.');
+        if (clipInput) clipInput.focus();
+        return;
+      }
+
+      hideError();
+      sendClipBtn.disabled = true;
+      if (sendClipSpinner) sendClipSpinner.classList.remove('hidden');
+      if (sendClipText) sendClipText.textContent = 'Sending...';
+
+      try {
+        const resp = await fetch('/api/clipboard', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ text: text })
+        });
+
+        if (!resp.ok) {
+          let errDesc = 'Failed to set clipboard (' + resp.status + ')';
+          try {
+            const json = await resp.json();
+            if (json && json.error) errDesc = json.error;
+          } catch (_) {}
+          showError(errDesc);
+          return;
+        }
+
+        showNotice('✅ Sent to PC clipboard! Ready to Ctrl + V on your laptop.');
+        if (sendClipText) sendClipText.textContent = '✅ Sent!';
+        setTimeout(() => {
+          if (sendClipText) sendClipText.textContent = '📤 Send to PC';
+        }, 2500);
+      } catch (err) {
+        showError('Network error: ' + (err.message || 'Server unreachable'));
+      } finally {
+        sendClipBtn.disabled = false;
+        if (sendClipSpinner) sendClipSpinner.classList.add('hidden');
+        if (sendClipText && sendClipText.textContent !== '✅ Sent!') {
+          sendClipText.textContent = '📤 Send to PC';
+        }
+      }
+    });
+  }
+
+  if (copyPhoneBtn) {
+    copyPhoneBtn.addEventListener('click', async function () {
+      if (!clipInput || !clipInput.value) return;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(clipInput.value);
+          showNotice('📋 Copied to phone clipboard!');
+        } else {
+          clipInput.select();
+          document.execCommand('copy');
+          showNotice('📋 Copied to phone clipboard!');
+        }
+      } catch (err) {
+        showError('Could not copy to phone: ' + err.message);
+      }
+    });
+  }
+
+  if (clearClipBtn) {
+    clearClipBtn.addEventListener('click', function () {
+      if (clipInput) clipInput.value = '';
+      if (clipMeta) clipMeta.textContent = '2-Way Sync';
+      if (copyPhoneBtn) copyPhoneBtn.classList.add('hidden');
     });
   }
 

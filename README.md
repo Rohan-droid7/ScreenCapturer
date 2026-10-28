@@ -63,6 +63,16 @@ Left your computer unlocked at your desk, in a library, coffee shop, or someone 
 - ScreenCapturer instantly triggers `LockWorkStation` on Windows (equivalent to pressing **`Win + L`**) or displaysleep on macOS.
 - Session is securely locked right away — without touching your laptop keyboard!
 
+
+
+---
+
+### 📋 2-Way Clipboard Sync (Phone ⇄ Laptop)
+
+Effortlessly bridge your phone and computer without messaging apps or email drafts:
+
+- **📥 Get PC Clipboard:** Tap to grab whatever text, URL, or code snippet is currently copied on your laptop. Includes a one-tap **Copy on Phone** option.
+- **📤 Send to PC:** Type or paste text on your phone and tap **Send to PC** — it is immediately placed on your laptop's system clipboard, ready to paste with **Ctrl + V**!
 <p align="center">
   <img src="docs/images/mobile-capture-desktop.jpg" width="300" alt="Mobile Capture Desktop Preview" />
   &nbsp;&nbsp;&nbsp;&nbsp;

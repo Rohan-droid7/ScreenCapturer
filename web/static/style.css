@@ -254,6 +254,99 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* Clipboard Sync Card */
+.clipboard-card {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+.clip-textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--text-main);
+  font-family: var(--font);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  resize: vertical;
+  min-height: 68px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.clip-textarea:focus {
+  border-color: var(--accent);
+}
+
+.clip-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.clip-btn {
+  flex: 1;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  user-select: none;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.clip-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.clip-sub-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-link {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 2px 4px;
+  transition: color 0.15s ease;
+}
+
+.btn-link:hover {
+  color: var(--text-main);
+}
+
 /* Preview Card */
 .preview-card {
   background: var(--surface);
