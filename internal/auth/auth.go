@@ -25,6 +25,7 @@ type ipRecord struct {
 // Manager coordinates token verification, host validation, and rate limiting / IP lockout.
 type Manager struct {
 	tokenGetter  func() string
+	pinGetter    func() string
 	allowedHosts []string
 	port         int
 	nowFn        func() time.Time // for deterministic unit tests
@@ -36,9 +37,10 @@ type Manager struct {
 }
 
 // NewManager creates an authentication manager with 5 max failures and 60s lockout.
-func NewManager(tokenGetter func() string, allowedHosts []string, port int) *Manager {
+func NewManager(tokenGetter func() string, pinGetter func() string, allowedHosts []string, port int) *Manager {
 	return &Manager{
 		tokenGetter:  tokenGetter,
+		pinGetter:    pinGetter,
 		allowedHosts: allowedHosts,
 		port:         port,
 		nowFn:        time.Now,
@@ -120,13 +122,26 @@ func (m *Manager) ValidateHost(hostHeader string) bool {
 	return false
 }
 
-// VerifyToken compares a bearer token using crypto/subtle to prevent timing attacks.
+// VerifyToken compares a bearer token or 4-digit PIN using crypto/subtle to prevent timing attacks.
 func (m *Manager) VerifyToken(token string) bool {
-	expected := m.tokenGetter()
-	if expected == "" || token == "" {
+	token = strings.TrimSpace(token)
+	if token == "" {
 		return false
 	}
-	return subtle.ConstantTimeCompare([]byte(token), []byte(expected)) == 1
+
+	expected := m.tokenGetter()
+	if expected != "" && subtle.ConstantTimeCompare([]byte(token), []byte(expected)) == 1 {
+		return true
+	}
+
+	if m.pinGetter != nil {
+		pin := m.pinGetter()
+		if pin != "" && subtle.ConstantTimeCompare([]byte(token), []byte(pin)) == 1 {
+			return true
+		}
+	}
+
+	return false
 }
 
 // CheckRequest validates the Host header and the Bearer token, enforcing the 5-attempt / 60s lockout.

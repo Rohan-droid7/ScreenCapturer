@@ -40,7 +40,7 @@ func (m *mockCapturer) Capture() (*image.RGBA, error) {
 func setupTestServer(mockCap capture.Capturer, token string) (*Server, *auth.Manager) {
 	cfg := config.DefaultConfig()
 	cfg.Token = token
-	authMgr := auth.NewManager(func() string { return cfg.Token }, cfg.AllowedHosts, cfg.Port)
+	authMgr := auth.NewManager(func() string { return cfg.Token }, func() string { return cfg.PIN }, cfg.AllowedHosts, cfg.Port)
 	srv := NewServer(cfg, mockCap, authMgr)
 	return srv, authMgr
 }

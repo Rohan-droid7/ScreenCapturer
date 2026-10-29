@@ -43,14 +43,24 @@
   let currentBlobUrl = null;
   let currentFile = null;
 
-  // 1. Fragment Token Handling (#token=<token>)
-  function checkUrlFragmentToken() {
+  // 1. Token & PIN Handling (both query param ?token= and fragment #token=)
+  function checkUrlToken() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryToken = urlParams.get('token') || urlParams.get('pin');
+    if (queryToken) {
+      localStorage.setItem('screencap_token', queryToken.trim());
+      urlParams.delete('token');
+      urlParams.delete('pin');
+      const cleanSearch = urlParams.toString() ? '?' + urlParams.toString() : '';
+      history.replaceState(null, '', window.location.pathname + cleanSearch + window.location.hash);
+      return;
+    }
+
     const hash = window.location.hash;
     if (hash && hash.includes('token=')) {
-      const match = hash.match(/token=([a-fA-F0-9]+)/);
+      const match = hash.match(/token=([a-zA-Z0-9]+)/);
       if (match && match[1]) {
         localStorage.setItem('screencap_token', match[1]);
-        // Strip token fragment from address bar cleanly
         history.replaceState(null, '', window.location.pathname + window.location.search);
       }
     }
@@ -698,7 +708,7 @@
   }
 
   // Initialization
-  checkUrlFragmentToken();
+  checkUrlToken();
   updateTokenBanner();
   loadHistoryFromStorage();
 })();

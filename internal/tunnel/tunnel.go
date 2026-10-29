@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"runtime"
 	"sync"
-	"syscall"
 	"time"
 
 	"ScreenCapturer/internal/config"
@@ -229,9 +228,7 @@ func (m *Manager) Start() error {
 		cmd := exec.Command(binPath, "tunnel", "--url", targetURL, "--no-autoupdate")
 
 		// Hide console window on Windows
-		if runtime.GOOS == "windows" {
-			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-		}
+		configureHideWindow(cmd)
 
 		// Read combined stderr/stdout since cloudflared prints tunnel info to stderr
 		stderrPipe, err := cmd.StderrPipe()

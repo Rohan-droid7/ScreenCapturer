@@ -17,6 +17,7 @@ const AppName = "ScreenCapturer"
 // Config holds persistent user configuration.
 type Config struct {
 	Token         string   `json:"token"`
+	PIN           string   `json:"pin"`
 	Port          int      `json:"port"`
 	AllowedHosts  []string `json:"allowed_hosts"`
 	AutoStopHours int      `json:"auto_stop_hours"` // 0 = disabled
@@ -68,6 +69,14 @@ func ConfigFilePath() (string, error) {
 	return filepath.Join(dir, "config.json"), nil
 }
 
+// GeneratePIN generates a simple 4-digit numeric pairing PIN.
+func GeneratePIN() string {
+	b := make([]byte, 2)
+	_, _ = rand.Read(b)
+	num := (int(b[0])<<8 | int(b[1])) % 10000
+	return fmt.Sprintf("%04d", num)
+}
+
 // GenerateToken generates a cryptographically secure 32-byte hex-encoded token.
 func GenerateToken() (string, error) {
 	b := make([]byte, 32)
@@ -77,7 +86,7 @@ func GenerateToken() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-// LoadOrCreate loads existing config or creates a new one with a generated 32-byte token.
+// LoadOrCreate loads existing config or creates a new one with a generated 32-byte token and 4-digit PIN.
 func LoadOrCreate() (*Config, error) {
 	path, err := ConfigFilePath()
 	if err != nil {
@@ -94,6 +103,7 @@ func LoadOrCreate() (*Config, error) {
 				return nil, genErr
 			}
 			cfg.Token = token
+			cfg.PIN = GeneratePIN()
 			if saveErr := cfg.Save(); saveErr != nil {
 				return nil, saveErr
 			}
@@ -113,6 +123,10 @@ func LoadOrCreate() (*Config, error) {
 			return nil, genErr
 		}
 		cfg.Token = token
+		cfg.PIN = GeneratePIN()
+		_ = cfg.Save()
+	} else if cfg.PIN == "" {
+		cfg.PIN = GeneratePIN()
 		_ = cfg.Save()
 	}
 
@@ -147,7 +161,7 @@ func (c *Config) Save() error {
 	return nil
 }
 
-// RegenerateToken creates and saves a new 32-byte token.
+// RegenerateToken creates and saves a new 32-byte token and 4-digit PIN.
 func (c *Config) RegenerateToken() (string, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -157,6 +171,7 @@ func (c *Config) RegenerateToken() (string, error) {
 		return "", err
 	}
 	c.Token = newToken
+	c.PIN = GeneratePIN()
 
 	path, err := ConfigFilePath()
 	if err != nil {
@@ -177,4 +192,11 @@ func (c *Config) GetToken() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.Token
+}
+
+// GetPIN returns the current 4-digit PIN thread-safely.
+func (c *Config) GetPIN() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.PIN
 }

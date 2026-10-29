@@ -7,7 +7,7 @@ import (
 )
 
 func TestValidateHost(t *testing.T) {
-	mgr := NewManager(func() string { return "test-token" }, []string{"laptop.local", "my-pc"}, 8765)
+	mgr := NewManager(func() string { return "test-token" }, func() string { return "1234" }, []string{"laptop.local", "my-pc"}, 8765)
 
 	tests := []struct {
 		name     string
@@ -52,7 +52,7 @@ func TestValidateHost(t *testing.T) {
 
 func TestVerifyToken(t *testing.T) {
 	validToken := "e2d88198f3b259d64f891b65e921d7b67b120c24c29759ff539e93175c5e884b"
-	mgr := NewManager(func() string { return validToken }, nil, 8765)
+	mgr := NewManager(func() string { return validToken }, func() string { return "1234" }, nil, 8765)
 
 	tests := []struct {
 		name     string
@@ -78,7 +78,7 @@ func TestVerifyToken(t *testing.T) {
 
 func TestLockoutAfter5Failures(t *testing.T) {
 	validToken := "correct-secret-token"
-	mgr := NewManager(func() string { return validToken }, nil, 8765)
+	mgr := NewManager(func() string { return validToken }, func() string { return "1234" }, nil, 8765)
 
 	currentTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	mgr.SetTimeFunc(func() time.Time {

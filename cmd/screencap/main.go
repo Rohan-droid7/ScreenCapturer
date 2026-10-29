@@ -87,12 +87,12 @@ func main() {
 	}
 	defer nativeCap.Close()
 
-	authMgr := auth.NewManager(cfg.GetToken, cfg.AllowedHosts, cfg.Port)
+	authMgr := auth.NewManager(cfg.GetToken, cfg.GetPIN, cfg.AllowedHosts, cfg.Port)
 
 	// 7. Tunnel Manager (Cloudflare Quick Tunnel)
 	tunnelMgr := tunnel.NewManager(cfg.Port)
 	tunnelMgr.SetOnURLFound(func(pubURL string) {
-		remoteURL := fmt.Sprintf("%s/#token=%s", pubURL, cfg.GetToken())
+		remoteURL := fmt.Sprintf("%s/?token=%s", pubURL, cfg.GetToken())
 		logInstance.Infof("Remote Cellular URL: %s", remoteURL)
 		if *consoleMode {
 			fmt.Println("----------------------------------------------------------------")
@@ -122,8 +122,8 @@ func main() {
 	_ = server.GenerateAndOpenPairingPage(cfg, tunnelMgr)
 
 	lanIP := server.GetPrimaryLANIP()
-	pairingURL := fmt.Sprintf("http://%s:%d/#token=%s", lanIP, cfg.Port, cfg.GetToken())
-	localURL := fmt.Sprintf("http://127.0.0.1:%d/#token=%s", cfg.Port, cfg.GetToken())
+	pairingURL := fmt.Sprintf("http://%s:%d/?token=%s", lanIP, cfg.Port, cfg.GetToken())
+	localURL := fmt.Sprintf("http://127.0.0.1:%d/?token=%s", cfg.Port, cfg.GetToken())
 
 	if *consoleMode {
 		fmt.Println("================================================================")

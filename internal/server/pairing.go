@@ -13,8 +13,8 @@ import (
 func GeneratePairingHTML(cfg *config.Config, tunnelMgr *tunnel.Manager) string {
 	lanIP := GetPrimaryLANIP()
 	token := cfg.GetToken()
-	localURL := fmt.Sprintf("http://127.0.0.1:%d/#token=%s", cfg.Port, token)
-	lanURL := fmt.Sprintf("http://%s:%d/#token=%s", lanIP, cfg.Port, token)
+	localURL := fmt.Sprintf("http://127.0.0.1:%d/?token=%s", cfg.Port, token)
+	lanURL := fmt.Sprintf("http://%s:%d/?token=%s", lanIP, cfg.Port, token)
 
 	tunnelURL := ""
 	tunnelActive := false
@@ -318,6 +318,11 @@ func GeneratePairingHTML(cfg *config.Config, tunnelMgr *tunnel.Manager) string {
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=%s" alt="Wi-Fi Pairing QR" />
       </div>
 
+      <div style="margin: 12px 0 16px 0; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
+        <span style="font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;">Quick 4-Digit Pairing PIN</span>
+        <div style="font-size: 1.8rem; font-weight: 700; letter-spacing: 0.25em; color: #38bdf8; margin-top: 4px;">%s</div>
+      </div>
+
       <div class="url-display">%s</div>
 
       <div class="actions">
@@ -383,7 +388,7 @@ func GeneratePairingHTML(cfg *config.Config, tunnelMgr *tunnel.Manager) string {
 
       if (active && url) {
         activeCfUrl = url;
-        const fullRemoteUrl = url + '/#token=' + token;
+        const fullRemoteUrl = url + '/?token=' + token;
         spinner.classList.add('hidden');
         qrImg.classList.remove('hidden');
         qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(fullRemoteUrl);
@@ -446,7 +451,7 @@ func GeneratePairingHTML(cfg *config.Config, tunnelMgr *tunnel.Manager) string {
 
     function copyCfUrl() {
       if (activeCfUrl) {
-        copyText(activeCfUrl + '/#token=' + token, 'Remote Cellular link copied to clipboard!');
+        copyText(activeCfUrl + '/?token=' + token, 'Remote Cellular link copied to clipboard!');
       }
     }
 
@@ -488,7 +493,7 @@ func GeneratePairingHTML(cfg *config.Config, tunnelMgr *tunnel.Manager) string {
     setInterval(pollTunnelStatus, 1500);
   </script>
 </body>
-</html>`, lanURL, lanURL, localURL, lanURL, tunnelURL, tunnelActive, token, cfg.Port)
+</html>`, lanURL, cfg.GetPIN(), lanURL, localURL, lanURL, tunnelURL, tunnelActive, token, cfg.Port)
 }
 
 // GenerateAndOpenPairingPage opens the HTTP dashboard URL in the default browser.
