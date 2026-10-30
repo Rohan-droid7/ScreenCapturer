@@ -2,8 +2,10 @@ package server
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"ScreenCapturer/internal/config"
 	"ScreenCapturer/internal/tunnel"
@@ -496,18 +498,37 @@ func GeneratePairingHTML(cfg *config.Config, tunnelMgr *tunnel.Manager) string {
 </html>`, lanURL, cfg.GetPIN(), lanURL, localURL, lanURL, tunnelURL, tunnelActive, token, cfg.Port)
 }
 
-// GenerateAndOpenPairingPage opens the HTTP dashboard URL in the default browser.
+// GenerateAndOpenPairingPage opens the HTTP dashboard URL or local file fallback in the default browser.
 func GenerateAndOpenPairingPage(cfg *config.Config, tunnelMgr *tunnel.Manager) error {
 	htmlContent := GeneratePairingHTML(cfg, tunnelMgr)
 
-	// Save to disk as backup
+	var localFileURI string
 	if appData, err := config.ConfigFilePath(); err == nil {
 		qrPath := filepath.Join(filepath.Dir(appData), "pairing.html")
 		_ = os.WriteFile(qrPath, []byte(htmlContent), 0600)
+		localFileURI = "file:///" + filepath.ToSlash(qrPath)
 	}
 
-	// Open the reliable HTTP URL directly on localhost
 	pairingHTTPURL := fmt.Sprintf("http://127.0.0.1:%d/pairing", cfg.Port)
+
+	// Ping the HTTP endpoint with a short timeout.
+	// If an older instance is running without the /pairing route, it returns 404.
+	// In that case, or if the server hasn't finished binding, fall back cleanly to localFileURI.
+	client := &http.Client{Timeout: 600 * time.Millisecond}
+	resp, err := client.Get(pairingHTTPURL)
+	if err == nil {
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			OpenBrowser(pairingHTTPURL)
+			return nil
+		}
+	}
+
+	if localFileURI != "" {
+		OpenBrowser(localFileURI)
+		return nil
+	}
+
 	OpenBrowser(pairingHTTPURL)
 	return nil
 }

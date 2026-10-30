@@ -159,6 +159,9 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/tunnel/status", s.handleTunnelStatus)
 	mux.HandleFunc("/api/tunnel/toggle", s.handleTunnelToggle)
 	mux.HandleFunc("/pairing", s.handlePairingPage)
+	mux.HandleFunc("/pairing/", s.handlePairingPage)
+	mux.HandleFunc("/dashboard", s.handlePairingPage)
+	mux.HandleFunc("/dashboard/", s.handlePairingPage)
 
 	addr := fmt.Sprintf("0.0.0.0:%d", s.cfg.Port)
 	listener, err := net.Listen("tcp", addr)
